@@ -1,0 +1,103 @@
+{
+  "name": "direct-conflict-whole-source-tree",
+  "expected_outcome": "direct_conflict",
+  "repository": {
+    "id": 821473001,
+    "full_name": "gyutaetae/harness",
+    "html_url": "https://github.com/gyutaetae/harness",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "id": 202000002,
+    "number": 202,
+    "html_url": "https://github.com/gyutaetae/harness/pull/202",
+    "diff_url": "https://github.com/gyutaetae/harness/pull/202.diff",
+    "title": "Index every repository file",
+    "body": "This PR recursively uploads every source-code file in the repository for model analysis.",
+    "state": "open",
+    "user": {"id": 502002, "login": "indexer-developer", "type": "User"},
+    "head": {"sha": "a202a202a202a202a202a202a202a202a202a202", "ref": "feature/full-index"},
+    "base": {"sha": "b202b202b202b202b202b202b202b202b202b202", "ref": "main"}
+  },
+  "source_versions": [
+    {
+      "id": "sv-requirement-allowed-sources",
+      "url": "https://github.com/gyutaetae/harness/blob/main/docs/prd.md#repository-memory",
+      "content": "Requirement: Initial Sync ingests allowed Markdown, Issues, PR descriptions and diffs, and commit messages; do not ingest the whole source tree."
+    },
+    {
+      "id": "sv-pr-202",
+      "url": "https://github.com/gyutaetae/harness/pull/202",
+      "content": "Index every repository file\n\nThis PR recursively uploads every source-code file in the repository for model analysis."
+    }
+  ],
+  "active_knowledge": [
+    {
+      "logical_key": "requirement:allowed-source-boundary",
+      "node_type": "requirement",
+      "status": "active",
+      "source_version_id": "sv-requirement-allowed-sources"
+    }
+  ],
+  "analysis": {
+    "outcome": "direct_conflict",
+    "nodes": [
+      {
+        "logical_key": "task:index-whole-source-tree",
+        "node_type": "task",
+        "title": "Index every repository file",
+        "summary": "Uploads the repository source tree for model analysis.",
+        "status": "active",
+        "evidence": [
+          {
+            "source_version_id": "sv-pr-202",
+            "url": "https://github.com/gyutaetae/harness/pull/202",
+            "exact_quote": "recursively uploads every source-code file in the repository",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "finding_type": "direct_conflict",
+        "target_node_logical_key": "requirement:allowed-source-boundary",
+        "target_node_type": "requirement",
+        "target_node_status": "active",
+        "contradicts": true,
+        "uncertain": false,
+        "explanation": "Whole-tree ingestion violates the active allowed-source requirement.",
+        "recommended_action": "Limit collection to the documented Markdown and GitHub metadata sources.",
+        "evidence": [
+          {
+            "source_version_id": "sv-requirement-allowed-sources",
+            "url": "https://github.com/gyutaetae/harness/blob/main/docs/prd.md#repository-memory",
+            "exact_quote": "do not ingest the whole source tree",
+            "role": "contradicts"
+          },
+          {
+            "source_version_id": "sv-pr-202",
+            "url": "https://github.com/gyutaetae/harness/pull/202",
+            "exact_quote": "uploads every source-code file",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "from_node_logical_key": "task:index-whole-source-tree",
+        "to_node_logical_key": "requirement:allowed-source-boundary",
+        "relation_type": "conflicts_with",
+        "evidence": [
+          {
+            "source_version_id": "sv-requirement-allowed-sources",
+            "url": "https://github.com/gyutaetae/harness/blob/main/docs/prd.md#repository-memory",
+            "exact_quote": "do not ingest the whole source tree",
+            "role": "contradicts"
+          }
+        ]
+      }
+    ]
+  }
+}

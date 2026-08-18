@@ -1,0 +1,173 @@
+name: Alignment Memory Publish
+
+on:
+  workflow_run:
+    workflows: [Alignment Memory Analyze]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: >-
+    ${{ github.event.workflow_run.event == 'pull_request'
+      && format('alignment-publish-{0}-pr-{1}', github.repository,
+        github.event.workflow_run.pull_requests[0].number)
+      || format('alignment-publish-{0}-repository', github.repository) }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      checks: write
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Check out trusted main worker
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install trusted worker dependencies
+        run: uv sync --project backend --frozen --group dev
+
+      - name: Download Analyze artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: alignment-analysis-${{ github.event.workflow_run.id }}
+          path: artifacts
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Render fixed publication
+        run: >-
+          uv run --project backend python -m alignment_memory.interfaces.worker.cli
+          publish --artifact artifacts/analysis.json --output artifacts/publish.json
+          --repository-root "$GITHUB_WORKSPACE"
+
+      - name: Select validated publication target
+        id: target
+        shell: bash
+        run: |
+          kind="$(jq -er '.publicationKind' artifacts/publish.json)"
+          case "$kind" in
+            pr_comment|generated_wiki) ;;
+            *) exit 1 ;;
+          esac
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+
+      - name: Update PR comment and check
+        if: steps.target.outputs.kind == 'pr_comment'
+        uses: actions/github-script@v7
+        env:
+          PUBLISH_MANIFEST: artifacts/publish.json
+        with:
+          script: |
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync(process.env.PUBLISH_MANIFEST, 'utf8'));
+            if (manifest.repositoryFullName !== `${context.repo.owner}/${context.repo.repo}`) {
+              core.setFailed('Artifact repository identity does not match this repository');
+              return;
+            }
+            const pull = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: manifest.prNumber,
+            });
+            if (pull.data.head.repo.full_name !== manifest.repositoryFullName ||
+                pull.data.head.sha !== manifest.headSha) {
+              core.setFailed('Stale or external PR head; publication refused');
+              return;
+            }
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: manifest.prNumber,
+              per_page: 100,
+            });
+            const previous = comments.find(comment =>
+              typeof comment.body === 'string' && comment.body.includes(manifest.commentMarker));
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body: manifest.commentBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: manifest.prNumber,
+                body: manifest.commentBody,
+              });
+            }
+            const runs = await github.paginate(github.rest.checks.listForRef, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: manifest.headSha,
+              check_name: manifest.checkName,
+              per_page: 100,
+            });
+            const previousCheck = runs.find(run => run.external_id === manifest.commentMarker);
+            const output = {
+              title: `${manifest.checkName}: ${manifest.checkConclusion}`,
+              summary: manifest.checkSummary,
+            };
+            if (previousCheck) {
+              await github.rest.checks.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                check_run_id: previousCheck.id,
+                status: 'completed',
+                conclusion: manifest.checkConclusion,
+                output,
+              });
+            } else {
+              await github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: manifest.checkName,
+                head_sha: manifest.headSha,
+                status: 'completed',
+                conclusion: manifest.checkConclusion,
+                external_id: manifest.commentMarker,
+                output,
+              });
+            }
+
+      - name: Revalidate main SHA before generated write
+        if: steps.target.outputs.kind == 'generated_wiki'
+        shell: bash
+        run: |
+          branch="${{ github.event.repository.default_branch }}"
+          git fetch --no-tags origin "$branch"
+          current_sha="$(git rev-parse "origin/$branch")"
+          expected_sha="$(jq -er '.expectedMainSha' artifacts/publish.json)"
+          test "$current_sha" = "$expected_sha"
+          test "$(git rev-parse HEAD)" = "$expected_sha"
+
+      - name: Commit generated knowledge only
+        if: steps.target.outputs.kind == 'generated_wiki'
+        shell: bash
+        run: |
+          git add -- knowledge/generated/project-memory.md
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          test "$(git diff --cached --name-only)" = "knowledge/generated/project-memory.md"
+          git config user.name "alignment-memory[bot]"
+          git config user.email "alignment-memory[bot]@users.noreply.github.com"
+          revision="$(jq -er '.inputHash' artifacts/publish.json | cut -c1-12)"
+          git commit -m "chore(alignment-memory): publish generated knowledge $revision"
+          git push origin "HEAD:${{ github.event.repository.default_branch }}"

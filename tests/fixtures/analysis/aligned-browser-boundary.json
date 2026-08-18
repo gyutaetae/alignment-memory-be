@@ -1,0 +1,78 @@
+{
+  "name": "aligned-browser-boundary",
+  "expected_outcome": "aligned",
+  "repository": {
+    "id": 821473001,
+    "full_name": "gyutaetae/harness",
+    "html_url": "https://github.com/gyutaetae/harness",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "id": 201000001,
+    "number": 101,
+    "html_url": "https://github.com/gyutaetae/harness/pull/101",
+    "diff_url": "https://github.com/gyutaetae/harness/pull/101.diff",
+    "title": "Add desktop alignment dashboard",
+    "body": "This PR adds the desktop web alignment dashboard and does not add a browser extension.",
+    "state": "open",
+    "user": {"id": 501001, "login": "demo-developer", "type": "User"},
+    "head": {"sha": "a101a101a101a101a101a101a101a101a101a101", "ref": "feature/dashboard"},
+    "base": {"sha": "b101b101b101b101b101b101b101b101b101b101", "ref": "main"}
+  },
+  "source_versions": [
+    {
+      "id": "sv-decision-browser-boundary",
+      "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-017--narrow-mvp-boundary",
+      "content": "Decision: Browser extensions are excluded from the MVP. The product is a desktop web tool."
+    },
+    {
+      "id": "sv-pr-101",
+      "url": "https://github.com/gyutaetae/harness/pull/101",
+      "content": "Add desktop alignment dashboard\n\nThis PR adds the desktop web alignment dashboard and does not add a browser extension."
+    }
+  ],
+  "active_knowledge": [
+    {
+      "logical_key": "decision:no-browser-extension",
+      "node_type": "decision",
+      "status": "active",
+      "source_version_id": "sv-decision-browser-boundary"
+    }
+  ],
+  "analysis": {
+    "outcome": "aligned",
+    "nodes": [
+      {
+        "logical_key": "task:add-alignment-dashboard",
+        "node_type": "task",
+        "title": "Add desktop alignment dashboard",
+        "summary": "Builds the desktop web surface while preserving the extension exclusion.",
+        "status": "active",
+        "evidence": [
+          {
+            "source_version_id": "sv-pr-101",
+            "url": "https://github.com/gyutaetae/harness/pull/101",
+            "exact_quote": "This PR adds the desktop web alignment dashboard and does not add a browser extension.",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "findings": [],
+    "edges": [
+      {
+        "from_node_logical_key": "task:add-alignment-dashboard",
+        "to_node_logical_key": "decision:no-browser-extension",
+        "relation_type": "complies_with",
+        "evidence": [
+          {
+            "source_version_id": "sv-pr-101",
+            "url": "https://github.com/gyutaetae/harness/pull/101",
+            "exact_quote": "does not add a browser extension",
+            "role": "supports"
+          }
+        ]
+      }
+    ]
+  }
+}

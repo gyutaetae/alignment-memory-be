@@ -1,0 +1,103 @@
+{
+  "name": "direct-conflict-application-write",
+  "expected_outcome": "direct_conflict",
+  "repository": {
+    "id": 821473001,
+    "full_name": "gyutaetae/harness",
+    "html_url": "https://github.com/gyutaetae/harness",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "id": 202000003,
+    "number": 203,
+    "html_url": "https://github.com/gyutaetae/harness/pull/203",
+    "diff_url": "https://github.com/gyutaetae/harness/pull/203.diff",
+    "title": "Let the model rewrite API routes",
+    "body": "After each merge, the model directly rewrites backend/src/alignment_memory/interfaces/api/main.py.",
+    "state": "open",
+    "user": {"id": 502003, "login": "automation-developer", "type": "User"},
+    "head": {"sha": "a203a203a203a203a203a203a203a203a203a203", "ref": "feature/ai-app-write"},
+    "base": {"sha": "b203b203b203b203b203b203b203b203b203b203", "ref": "main"}
+  },
+  "source_versions": [
+    {
+      "id": "sv-decision-no-app-write",
+      "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-011--automatic-writes-are-generated-only",
+      "content": "Decision: AI may commit only knowledge/generated/** and cannot alter application code, workflows, raw GitHub text, or human-authored Markdown."
+    },
+    {
+      "id": "sv-pr-203",
+      "url": "https://github.com/gyutaetae/harness/pull/203",
+      "content": "Let the model rewrite API routes\n\nAfter each merge, the model directly rewrites backend/src/alignment_memory/interfaces/api/main.py."
+    }
+  ],
+  "active_knowledge": [
+    {
+      "logical_key": "decision:generated-only-writes",
+      "node_type": "decision",
+      "status": "active",
+      "source_version_id": "sv-decision-no-app-write"
+    }
+  ],
+  "analysis": {
+    "outcome": "direct_conflict",
+    "nodes": [
+      {
+        "logical_key": "task:model-rewrite-api-routes",
+        "node_type": "task",
+        "title": "Let the model rewrite API routes",
+        "summary": "Allows model output to modify application code after merge.",
+        "status": "active",
+        "evidence": [
+          {
+            "source_version_id": "sv-pr-203",
+            "url": "https://github.com/gyutaetae/harness/pull/203",
+            "exact_quote": "the model directly rewrites backend/src/alignment_memory/interfaces/api/main.py",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "finding_type": "direct_conflict",
+        "target_node_logical_key": "decision:generated-only-writes",
+        "target_node_type": "decision",
+        "target_node_status": "active",
+        "contradicts": true,
+        "uncertain": false,
+        "explanation": "The PR gives model output authority to alter application code.",
+        "recommended_action": "Keep automatic writes inside knowledge/generated/**.",
+        "evidence": [
+          {
+            "source_version_id": "sv-decision-no-app-write",
+            "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-011--automatic-writes-are-generated-only",
+            "exact_quote": "cannot alter application code",
+            "role": "contradicts"
+          },
+          {
+            "source_version_id": "sv-pr-203",
+            "url": "https://github.com/gyutaetae/harness/pull/203",
+            "exact_quote": "directly rewrites backend/src/alignment_memory/interfaces/api/main.py",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "from_node_logical_key": "task:model-rewrite-api-routes",
+        "to_node_logical_key": "decision:generated-only-writes",
+        "relation_type": "conflicts_with",
+        "evidence": [
+          {
+            "source_version_id": "sv-decision-no-app-write",
+            "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-011--automatic-writes-are-generated-only",
+            "exact_quote": "AI may commit only knowledge/generated/**",
+            "role": "contradicts"
+          }
+        ]
+      }
+    ]
+  }
+}

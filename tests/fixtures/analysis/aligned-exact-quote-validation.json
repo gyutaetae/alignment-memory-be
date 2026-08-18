@@ -1,0 +1,78 @@
+{
+  "name": "aligned-exact-quote-validation",
+  "expected_outcome": "aligned",
+  "repository": {
+    "id": 821473001,
+    "full_name": "gyutaetae/harness",
+    "html_url": "https://github.com/gyutaetae/harness",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "id": 201000002,
+    "number": 102,
+    "html_url": "https://github.com/gyutaetae/harness/pull/102",
+    "diff_url": "https://github.com/gyutaetae/harness/pull/102.diff",
+    "title": "Validate evidence quotes before persistence",
+    "body": "Reject analysis evidence unless its exact quote occurs in the normalized stored source body.",
+    "state": "open",
+    "user": {"id": 501002, "login": "evidence-maintainer", "type": "User"},
+    "head": {"sha": "a102a102a102a102a102a102a102a102a102a102", "ref": "feature/evidence"},
+    "base": {"sha": "b102b102b102b102b102b102b102b102b102b102", "ref": "main"}
+  },
+  "source_versions": [
+    {
+      "id": "sv-requirement-exact-evidence",
+      "url": "https://github.com/gyutaetae/harness/blob/main/docs/prd.md#success-criteria",
+      "content": "Requirement: Every AI result has an exact source URL and a quote found in the stored source version."
+    },
+    {
+      "id": "sv-pr-102",
+      "url": "https://github.com/gyutaetae/harness/pull/102",
+      "content": "Validate evidence quotes before persistence\n\nReject analysis evidence unless its exact quote occurs in the normalized stored source body."
+    }
+  ],
+  "active_knowledge": [
+    {
+      "logical_key": "requirement:exact-evidence",
+      "node_type": "requirement",
+      "status": "active",
+      "source_version_id": "sv-requirement-exact-evidence"
+    }
+  ],
+  "analysis": {
+    "outcome": "aligned",
+    "nodes": [
+      {
+        "logical_key": "task:validate-exact-quotes",
+        "node_type": "task",
+        "title": "Validate exact quotes",
+        "summary": "Rejects evidence that is absent from normalized stored source text.",
+        "status": "active",
+        "evidence": [
+          {
+            "source_version_id": "sv-pr-102",
+            "url": "https://github.com/gyutaetae/harness/pull/102",
+            "exact_quote": "Reject analysis evidence unless its exact quote occurs in the normalized stored source body.",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "findings": [],
+    "edges": [
+      {
+        "from_node_logical_key": "task:validate-exact-quotes",
+        "to_node_logical_key": "requirement:exact-evidence",
+        "relation_type": "implements",
+        "evidence": [
+          {
+            "source_version_id": "sv-requirement-exact-evidence",
+            "url": "https://github.com/gyutaetae/harness/blob/main/docs/prd.md#success-criteria",
+            "exact_quote": "Every AI result has an exact source URL and a quote found in the stored source version.",
+            "role": "supports"
+          }
+        ]
+      }
+    ]
+  }
+}

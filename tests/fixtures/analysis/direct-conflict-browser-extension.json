@@ -1,0 +1,103 @@
+{
+  "name": "direct-conflict-browser-extension",
+  "expected_outcome": "direct_conflict",
+  "repository": {
+    "id": 821473001,
+    "full_name": "gyutaetae/harness",
+    "html_url": "https://github.com/gyutaetae/harness",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "id": 202000001,
+    "number": 201,
+    "html_url": "https://github.com/gyutaetae/harness/pull/201",
+    "diff_url": "https://github.com/gyutaetae/harness/pull/201.diff",
+    "title": "Add browser extension sync",
+    "body": "This PR adds a Chrome browser extension that syncs the active tab into Alignment Memory.",
+    "state": "open",
+    "user": {"id": 502001, "login": "extension-developer", "type": "User"},
+    "head": {"sha": "a201a201a201a201a201a201a201a201a201a201", "ref": "feature/extension"},
+    "base": {"sha": "b201b201b201b201b201b201b201b201b201b201", "ref": "main"}
+  },
+  "source_versions": [
+    {
+      "id": "sv-decision-no-extension",
+      "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-017--narrow-mvp-boundary",
+      "content": "Decision: Browser extensions are excluded from the MVP. The product is a desktop web tool."
+    },
+    {
+      "id": "sv-pr-201",
+      "url": "https://github.com/gyutaetae/harness/pull/201",
+      "content": "Add browser extension sync\n\nThis PR adds a Chrome browser extension that syncs the active tab into Alignment Memory."
+    }
+  ],
+  "active_knowledge": [
+    {
+      "logical_key": "decision:no-browser-extension",
+      "node_type": "decision",
+      "status": "active",
+      "source_version_id": "sv-decision-no-extension"
+    }
+  ],
+  "analysis": {
+    "outcome": "direct_conflict",
+    "nodes": [
+      {
+        "logical_key": "task:add-browser-extension-sync",
+        "node_type": "task",
+        "title": "Add browser extension sync",
+        "summary": "Adds a Chrome extension as a new ingestion surface.",
+        "status": "active",
+        "evidence": [
+          {
+            "source_version_id": "sv-pr-201",
+            "url": "https://github.com/gyutaetae/harness/pull/201",
+            "exact_quote": "This PR adds a Chrome browser extension that syncs the active tab into Alignment Memory.",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "finding_type": "direct_conflict",
+        "target_node_logical_key": "decision:no-browser-extension",
+        "target_node_type": "decision",
+        "target_node_status": "active",
+        "contradicts": true,
+        "uncertain": false,
+        "explanation": "The PR adds the browser extension explicitly excluded by the active MVP decision.",
+        "recommended_action": "Remove the browser extension or supersede the decision with a reason.",
+        "evidence": [
+          {
+            "source_version_id": "sv-decision-no-extension",
+            "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-017--narrow-mvp-boundary",
+            "exact_quote": "Browser extensions are excluded from the MVP.",
+            "role": "contradicts"
+          },
+          {
+            "source_version_id": "sv-pr-201",
+            "url": "https://github.com/gyutaetae/harness/pull/201",
+            "exact_quote": "This PR adds a Chrome browser extension",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "from_node_logical_key": "task:add-browser-extension-sync",
+        "to_node_logical_key": "decision:no-browser-extension",
+        "relation_type": "conflicts_with",
+        "evidence": [
+          {
+            "source_version_id": "sv-decision-no-extension",
+            "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-017--narrow-mvp-boundary",
+            "exact_quote": "Browser extensions are excluded from the MVP.",
+            "role": "contradicts"
+          }
+        ]
+      }
+    ]
+  }
+}

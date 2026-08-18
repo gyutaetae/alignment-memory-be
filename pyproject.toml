@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "alignment-memory"
+version = "0.1.0"
+description = "Evidence-grounded project alignment memory"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi>=0.116,<1.0",
+  "httpx>=0.28,<1.0",
+  "psycopg[binary,pool]>=3.2,<4.0",
+  "pydantic>=2.11,<3.0",
+  "pydantic-settings>=2.10,<3.0",
+  "pyjwt[crypto]>=2.10,<3.0",
+  "uvicorn[standard]>=0.35,<1.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4,<10.0",
+  "pytest-asyncio>=1.1,<2.0",
+  "ruff>=0.12,<1.0",
+]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+  "postgres: requires TEST_DATABASE_URL and exercises PostgreSQL migrations",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

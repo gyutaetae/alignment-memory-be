@@ -1,0 +1,78 @@
+{
+  "name": "aligned-generated-only",
+  "expected_outcome": "aligned",
+  "repository": {
+    "id": 821473001,
+    "full_name": "gyutaetae/harness",
+    "html_url": "https://github.com/gyutaetae/harness",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "id": 201000003,
+    "number": 103,
+    "html_url": "https://github.com/gyutaetae/harness/pull/103",
+    "diff_url": "https://github.com/gyutaetae/harness/pull/103.diff",
+    "title": "Render generated project memory",
+    "body": "The publisher writes only knowledge/generated/project-memory.md and never edits application code.",
+    "state": "open",
+    "user": {"id": 501003, "login": "publisher-owner", "type": "User"},
+    "head": {"sha": "a103a103a103a103a103a103a103a103a103a103", "ref": "feature/wiki-render"},
+    "base": {"sha": "b103b103b103b103b103b103b103b103b103b103", "ref": "main"}
+  },
+  "source_versions": [
+    {
+      "id": "sv-decision-generated-only",
+      "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-011--automatic-writes-are-generated-only",
+      "content": "Decision: Automatic writes are limited to knowledge/generated/** and cannot alter app code or human-authored Markdown."
+    },
+    {
+      "id": "sv-pr-103",
+      "url": "https://github.com/gyutaetae/harness/pull/103",
+      "content": "Render generated project memory\n\nThe publisher writes only knowledge/generated/project-memory.md and never edits application code."
+    }
+  ],
+  "active_knowledge": [
+    {
+      "logical_key": "decision:generated-only-writes",
+      "node_type": "decision",
+      "status": "active",
+      "source_version_id": "sv-decision-generated-only"
+    }
+  ],
+  "analysis": {
+    "outcome": "aligned",
+    "nodes": [
+      {
+        "logical_key": "artifact:generated-project-memory",
+        "node_type": "artifact",
+        "title": "Generated project memory",
+        "summary": "Renders deterministic Markdown inside the generated-only path.",
+        "status": "active",
+        "evidence": [
+          {
+            "source_version_id": "sv-pr-103",
+            "url": "https://github.com/gyutaetae/harness/pull/103",
+            "exact_quote": "writes only knowledge/generated/project-memory.md",
+            "role": "supports"
+          }
+        ]
+      }
+    ],
+    "findings": [],
+    "edges": [
+      {
+        "from_node_logical_key": "artifact:generated-project-memory",
+        "to_node_logical_key": "decision:generated-only-writes",
+        "relation_type": "complies_with",
+        "evidence": [
+          {
+            "source_version_id": "sv-decision-generated-only",
+            "url": "https://github.com/gyutaetae/harness/blob/main/docs/adr.md#adr-011--automatic-writes-are-generated-only",
+            "exact_quote": "Automatic writes are limited to knowledge/generated/**",
+            "role": "supports"
+          }
+        ]
+      }
+    ]
+  }
+}

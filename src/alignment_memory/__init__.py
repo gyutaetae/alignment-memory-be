@@ -1,0 +1,1 @@
+"""Alignment Memory application package."""
