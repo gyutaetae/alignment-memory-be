@@ -30,7 +30,7 @@ Status for all entries: `accepted` unless noted.
 
 ## ADR-005 — GitHub Actions is the MVP worker
 
-- **Decision:** Action performs collection and OpenRouter analysis; FastAPI is a short-lived control plane.
+- **Decision:** Action performs collection and LLM analysis; FastAPI is a short-lived control plane.
 - **Intent:** avoid serverless timeouts and produce visible, real collaboration traces.
 - **Trade-off:** collaborator/in-repository branches only; move to a queue worker when multi-repository scale requires it.
 
@@ -40,9 +40,9 @@ Status for all entries: `accepted` unless noted.
 - **Intent:** a model or untrusted input cannot directly turn semantic output into arbitrary repository writes.
 - **Constraints:** no PR-head execution, no `pull_request_target`, fixed templates, generated-path allowlist.
 
-## ADR-007 — OpenRouter runtime; Codex is development tooling
+## ADR-007 — OpenAI runtime; Codex is development tooling
 
-- **Decision:** OpenRouter API with configurable fixed primary/fallback models and strict structured output.
+- **Decision:** OpenAI Chat Completions with a fixed primary model, optional fallback, and strict structured output. OpenRouter remains an explicit compatibility option.
 - **Intent:** provider flexibility after Gemini proved unreliable for the user; ChatGPT Pro/Codex credentials are not a public application runtime.
 - **Trade-off:** free models have low availability/limits; preserve a small-credit contingency and log the actual model.
 

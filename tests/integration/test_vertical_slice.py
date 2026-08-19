@@ -20,7 +20,7 @@ async def test_fixture_demo_calls_api_and_worker_and_proves_retry_idempotency(tm
         "actualModel": "fixture-model",
         "liveProof": False,
         "disclaimer": (
-            "Deterministic local fixtures; this is not GitHub, OpenRouter, "
+            "Deterministic local fixtures; this is not GitHub, OpenAI, "
             "Supabase, or Vercel live proof."
         ),
     }

@@ -98,7 +98,7 @@ def test_fixture_test_header_requires_explicit_test_setting() -> None:
     assert accepted.status_code == 200
 
 
-def test_live_composition_does_not_connect_or_require_openrouter_on_app_creation() -> None:
+def test_live_composition_does_not_connect_or_require_llm_on_app_creation() -> None:
     app = create_app(
         Settings(
             app_mode="live",

@@ -7,8 +7,8 @@
 - `Member`: authenticated repository collaborator.
 - `GitHub App`: installation, repository permission, and Initial Sync dispatch.
 - `FastAPI`: control plane; auth, job lifecycle, reads, Handshake/Override, validated persistence.
-- `Action Analyze Job`: trusted Python worker; collection, OpenRouter call, deterministic validation.
-- `Action Publish Job`: GitHub comment and allowed Markdown write; never receives the OpenRouter key.
+- `Action Analyze Job`: trusted Python worker; collection, OpenAI call, deterministic validation.
+- `Action Publish Job`: GitHub comment and allowed Markdown write; never receives the OpenAI key.
 - `Supabase`: Postgres, Auth, and row-level access control.
 
 ## Job states

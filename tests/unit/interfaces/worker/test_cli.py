@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 
 from alignment_memory.contracts import AnalysisResult
-from alignment_memory.interfaces.worker.cli import analyze_event
+from alignment_memory.interfaces.worker.cli import analyze_event, build_parser
 from alignment_memory.interfaces.worker.event_parser import ParsedGitHubEvent
 from alignment_memory.ports import (
     CollectedSource,
@@ -152,6 +152,20 @@ class FakeLlm:
             input_hash=request.input_hash,
             usage=LlmUsage(),
         )
+
+
+def test_worker_reads_openai_configuration_from_environment(monkeypatch) -> None:
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("OPENAI_PRIMARY_MODEL", "gpt-4.1-mini")
+
+    args = build_parser().parse_args(
+        ["analyze-event", "--event-path", "event.json", "--output", "result.json"]
+    )
+
+    assert args.llm_provider == "openai"
+    assert args.openai_api_key == "test-openai-key"
+    assert args.openai_primary_model == "gpt-4.1-mini"
 
 
 @pytest.mark.asyncio

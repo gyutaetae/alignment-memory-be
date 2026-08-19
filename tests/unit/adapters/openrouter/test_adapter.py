@@ -3,6 +3,7 @@ import json
 import httpx
 import pytest
 
+from alignment_memory.adapters.openai import OpenAIAdapter, OpenAIConfig
 from alignment_memory.adapters.openrouter import (
     FixtureOpenRouterAdapter,
     OpenRouterAdapter,
@@ -65,7 +66,15 @@ def _completion(
     payload: dict[str, object],
     *,
     model: str = "provider/model",
+    include_cost: bool = True,
 ) -> httpx.Response:
+    usage: dict[str, int | float] = {
+        "prompt_tokens": 10,
+        "completion_tokens": 5,
+        "total_tokens": 15,
+    }
+    if include_cost:
+        usage["cost"] = 0.001
     return httpx.Response(
         200,
         json={
@@ -76,12 +85,7 @@ def _completion(
                     "finish_reason": "stop",
                 }
             ],
-            "usage": {
-                "prompt_tokens": 10,
-                "completion_tokens": 5,
-                "total_tokens": 15,
-                "cost": 0.001,
-            },
+            "usage": usage,
         },
     )
 
@@ -147,6 +151,37 @@ async def test_schema_request_and_prompt_keep_repository_text_in_user_data() -> 
     assert captured["response_format"]["type"] == "json_schema"
     assert captured["response_format"]["json_schema"]["strict"] is True
     assert captured["provider"] == {"require_parameters": True}
+
+
+@pytest.mark.asyncio
+async def test_openai_request_uses_structured_output_without_router_fields() -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(json.loads(request.content))
+        return _completion(
+            _analysis_payload(),
+            model="gpt-4.1-mini-2025-04-14",
+            include_cost=False,
+        )
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler),
+        base_url="https://api.openai.test/v1",
+    ) as client:
+        adapter = OpenAIAdapter(
+            "secret",
+            OpenAIConfig(primary_model="gpt-4.1-mini", max_retries=0),
+            client=client,
+        )
+        result = await adapter.analyze(_request())
+
+    assert "provider" not in captured
+    assert captured["response_format"]["type"] == "json_schema"
+    assert "format" not in json.dumps(captured["response_format"])
+    assert result.provider == "openai"
+    assert result.actual_model == "gpt-4.1-mini-2025-04-14"
+    assert result.usage.cost is None
 
 
 @pytest.mark.asyncio

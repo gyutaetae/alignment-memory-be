@@ -13,6 +13,15 @@ def test_settings_read_environment_without_credentials(monkeypatch) -> None:
     assert settings.app_mode == "live"
 
 
+def test_openai_is_the_default_llm_provider() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.llm_provider == "openai"
+    assert settings.openai_primary_model == "gpt-4.1-mini"
+    assert settings.openai_fallback_model is None
+    assert settings.openai_base_url == "https://api.openai.com/v1"
+
+
 def test_fixture_runtime_accepts_no_external_credentials() -> None:
     Settings(app_mode="fixture", _env_file=None).validate_runtime()
 
