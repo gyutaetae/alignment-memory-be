@@ -39,7 +39,7 @@ jobs:
           enable-cache: true
 
       - name: Install trusted worker dependencies
-        run: uv sync --project backend --frozen --group dev
+        run: uv sync --frozen --group dev
 
       - name: Download Analyze artifact
         uses: actions/download-artifact@v4
@@ -51,7 +51,7 @@ jobs:
 
       - name: Render fixed publication
         run: >-
-          uv run --project backend python -m alignment_memory.interfaces.worker.cli
+          uv run python -m alignment_memory.interfaces.worker.cli
           publish --artifact artifacts/analysis.json --output artifacts/publish.json
           --repository-root "$GITHUB_WORKSPACE"
 

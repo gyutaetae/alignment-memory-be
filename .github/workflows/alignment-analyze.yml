@@ -50,7 +50,7 @@ jobs:
           enable-cache: true
 
       - name: Install trusted worker dependencies
-        run: uv sync --project backend --frozen --group dev
+        run: uv sync --frozen --group dev
 
       - name: Analyze allowlisted event data
         env:
@@ -63,7 +63,7 @@ jobs:
           OPENROUTER_FALLBACK_MODEL: ${{ vars.OPENROUTER_FALLBACK_MODEL || 'google/gemini-2.5-flash' }}
           OPENROUTER_PRIMARY_MODEL: ${{ vars.OPENROUTER_PRIMARY_MODEL || 'openai/gpt-4.1-mini' }}
         run: >-
-          uv run --project backend python -m alignment_memory.interfaces.worker.cli
+          uv run python -m alignment_memory.interfaces.worker.cli
           analyze-event --event-path "$GITHUB_EVENT_PATH"
           --output artifacts/analysis.json
 
