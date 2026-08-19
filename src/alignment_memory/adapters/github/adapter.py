@@ -86,6 +86,49 @@ class GitHubAppAdapter:
             await self._client.aclose()
             self._owns_client = False
 
+    async def list_installation_repos(
+        self,
+        installation_id: int,
+    ) -> list[JsonObject]:
+        """List repositories accessible to a GitHub App installation."""
+        token = await self._installation_access_token(installation_id)
+        items: list[JsonObject] = []
+        next_url: str | None = "/installation/repositories"
+        params: Mapping[str, str | int] | None = {"per_page": 100}
+        while next_url is not None:
+            response = await self._installation_request(
+                token,
+                "GET",
+                next_url,
+                params=params,
+                accept="application/vnd.github+json",
+                json_body=None,
+            )
+            payload = self._json_object(response)
+            repos = payload.get("repositories")
+            if isinstance(repos, list):
+                items.extend(item for item in repos if isinstance(item, dict))
+            next_url = response.links.get("next", {}).get("url")
+            params = None
+        return items
+
+    async def get_installation_info(
+        self,
+        installation_id: int,
+    ) -> JsonObject:
+        """Get installation metadata from GitHub."""
+        app_jwt = self._create_app_jwt()
+        response = await self._request_with_retry(
+            "GET",
+            f"/app/installations/{installation_id}",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {app_jwt}",
+                "X-GitHub-Api-Version": self._config.api_version,
+            },
+        )
+        return self._json_object(response)
+
     async def actor_is_allowed(
         self,
         repository: GitHubRepositoryRef,

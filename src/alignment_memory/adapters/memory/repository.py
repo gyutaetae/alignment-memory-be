@@ -190,9 +190,7 @@ class InMemoryRepository:
                 continue
             versions = self._node_versions[node.id]
             eligible = tuple(
-                version
-                for version in versions
-                if revision is None or version.revision <= revision
+                version for version in versions if revision is None or version.revision <= revision
             )
             if eligible:
                 active.append(eligible[-1])
@@ -348,11 +346,7 @@ class InMemoryRepository:
     async def list_handshakes(self, analysis_id: str) -> tuple[Handshake, ...]:
         return tuple(
             sorted(
-                (
-                    item
-                    for item in self._handshakes.values()
-                    if item.analysis_id == analysis_id
-                ),
+                (item for item in self._handshakes.values() if item.analysis_id == analysis_id),
                 key=lambda item: (item.created_at, item.id),
             )
         )
@@ -513,9 +507,7 @@ class InMemoryRepository:
         )
 
     async def count_sources(self, repository_id: str) -> int:
-        return sum(
-            source.repository_id == repository_id for source in self._sources.values()
-        )
+        return sum(source.repository_id == repository_id for source in self._sources.values())
 
     async def get_source_version_with_source(
         self,
@@ -619,10 +611,7 @@ class InMemoryRepository:
                 raise AppendOnlyViolation("worker result must be validated")
             if job.head_sha != expected_head_sha or alignment.head_sha != expected_head_sha:
                 raise StaleRepositoryStateError("worker head SHA is stale")
-            if (
-                expected_main_sha is not None
-                and repository.main_commit_sha != expected_main_sha
-            ):
+            if expected_main_sha is not None and repository.main_commit_sha != expected_main_sha:
                 raise StaleRepositoryStateError("repository main SHA is stale")
 
             run_key = (run.job_id, run.input_hash, run.prompt_version)
@@ -650,9 +639,7 @@ class InMemoryRepository:
             if existing_id is not None:
                 existing = self._alignments[existing_id]
                 if existing != alignment:
-                    raise AppendOnlyViolation(
-                        "validated result already exists with different data"
-                    )
+                    raise AppendOnlyViolation("validated result already exists with different data")
                 self._result_job_ids[job_id] = existing.id
                 return existing
             if alignment.id in self._alignments:

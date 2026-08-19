@@ -115,6 +115,62 @@ class OpenRouterAdapter:
             attempted_models=attempted_models,
         )
 
+    async def generate_passport(
+        self,
+        findings_text: str,
+        outcome: str,
+        language: str,
+    ) -> str:
+        """Generate a localized Context Passport explanation via OpenRouter."""
+        system_prompt = (
+            "You are a technical communication specialist. "
+            "Your job is to explain code alignment findings to a specific stakeholder "
+            "in their preferred language. Be concise, factual, and cite the evidence. "
+            "Structure your response as: what changed, why it matters, what evidence supports "
+            "the finding, and what action is recommended."
+        )
+        user_prompt = (
+            f"Generate a Context Passport in language: {language}\n\n"
+            f"Alignment outcome: {outcome}\n\n"
+            f"Findings:\n{findings_text}\n\n"
+            f"Explain this to the stakeholder in {language}. Include:\n"
+            f"1. What was found\n"
+            f"2. Why it matters\n"
+            f"3. Recommended next steps\n"
+            f"4. Key evidence citations"
+        )
+        body: dict[str, Any] = {
+            "model": self._config.primary_model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.3,
+            "stream": False,
+        }
+        try:
+            response = await self._client.post(
+                "/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self._api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=body,
+                timeout=self._config.timeout_seconds,
+            )
+            if response.status_code >= 400:
+                return f"Alignment outcome: {outcome}. {findings_text}"
+            payload = response.json()
+            choices = payload.get("choices", [])
+            if choices and isinstance(choices[0], dict):
+                message = choices[0].get("message", {})
+                content = message.get("content", "")
+                if content.strip():
+                    return content.strip()
+        except Exception:
+            pass
+        return f"Alignment outcome: {outcome}. {findings_text}"
+
     async def _analyze_with_model(
         self,
         request: AnalysisRequest,

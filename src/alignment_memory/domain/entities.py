@@ -139,10 +139,7 @@ class KnowledgeEdge:
             raise DomainValidationError("knowledge edge endpoints must differ")
         if self.valid_from_revision < 1:
             raise DomainValidationError("valid_from_revision must be at least 1")
-        if (
-            self.valid_to_revision is not None
-            and self.valid_to_revision < self.valid_from_revision
-        ):
+        if self.valid_to_revision is not None and self.valid_to_revision < self.valid_from_revision:
             raise DomainValidationError("valid_to_revision cannot precede valid_from_revision")
         if not self.evidence:
             raise DomainValidationError("knowledge edge requires evidence")

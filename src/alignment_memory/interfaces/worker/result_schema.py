@@ -35,9 +35,7 @@ class ArtifactEvent(ArtifactModel):
     proposed_change: NonEmptyText = Field(alias="proposedChange")
     source_url: HttpUrl = Field(alias="sourceUrl")
     pr_number: Annotated[int, Field(gt=0)] | None = Field(default=None, alias="prNumber")
-    publication_kind: Literal["pr_comment", "generated_wiki"] = Field(
-        alias="publicationKind"
-    )
+    publication_kind: Literal["pr_comment", "generated_wiki"] = Field(alias="publicationKind")
 
     @model_validator(mode="after")
     def validate_publication_kind(self) -> Self:
@@ -121,8 +119,7 @@ def _expected_outcome(
     context_is_sufficient: bool,
 ) -> AlignmentOutcome:
     if any(
-        finding.finding_type is AlignmentOutcome.DIRECT_CONFLICT
-        for finding in analysis.findings
+        finding.finding_type is AlignmentOutcome.DIRECT_CONFLICT for finding in analysis.findings
     ):
         return AlignmentOutcome.DIRECT_CONFLICT
     if not context_is_sufficient or any(

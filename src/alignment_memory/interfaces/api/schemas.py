@@ -37,6 +37,10 @@ class PassportGenerate(ApiModel):
     language: NonEmptyText
 
 
+class RegisterInstallationRequest(ApiModel):
+    installation_id: Annotated[int, Field(gt=0)] = Field(alias="installationId")
+
+
 class InternalJobCreate(ApiModel):
     repository_id: NonEmptyText = Field(alias="repositoryId")
     event_key: NonEmptyText = Field(alias="eventKey")

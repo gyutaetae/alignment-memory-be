@@ -65,17 +65,13 @@ AnalyzeEventRunner = Callable[..., Awaitable[ValidatedAnalysisArtifact]]
 
 _FIXTURE_NOW = datetime(2026, 8, 4, 12, 0, tzinfo=UTC)
 _FIXTURE_HMAC_SECRET = "alignment-memory-demo-hmac-secret"
-_DECISION_URL = (
-    "https://github.com/fixture-owner/alignment-memory-demo/blob/main/docs/adr.md"
-)
+_DECISION_URL = "https://github.com/fixture-owner/alignment-memory-demo/blob/main/docs/adr.md"
 _DECISION_QUOTE = "Browser extensions are out of scope for the MVP."
 _CONFLICT_HEAD = "c" * 40
 _RESOLVED_HEAD = "d" * 40
 _MERGE_HEAD = "e" * 40
 _MERGE_SOURCE_VERSION_ID = "demo-merge-source-version"
-_MERGE_SOURCE_URL = (
-    "https://github.com/fixture-owner/alignment-memory-demo/commit/" + _MERGE_HEAD
-)
+_MERGE_SOURCE_URL = "https://github.com/fixture-owner/alignment-memory-demo/commit/" + _MERGE_HEAD
 _MERGE_SOURCE_CONTENT = (
     "Keep the collaboration flow repository-native and document the resolved boundary."
 )
@@ -123,9 +119,7 @@ async def _evaluate_six_fixtures() -> tuple[dict[str, Any], dict[str, Alignment]
         alignments[case["name"]] = alignment
 
     expected_aligned = sum(case["expectedOutcome"] == "aligned" for case in cases)
-    expected_conflicts = sum(
-        case["expectedOutcome"] == "direct_conflict" for case in cases
-    )
+    expected_conflicts = sum(case["expectedOutcome"] == "direct_conflict" for case in cases)
     passed = all(case["passed"] for case in cases)
     return (
         {
@@ -261,9 +255,7 @@ def _collected_source(
     pull_request: Mapping[str, Any],
 ) -> CollectedSource:
     source_type = (
-        GitHubSourceType.PULL_REQUEST
-        if "/pull/" in source["url"]
-        else GitHubSourceType.MARKDOWN
+        GitHubSourceType.PULL_REQUEST if "/pull/" in source["url"] else GitHubSourceType.MARKDOWN
     )
     return CollectedSource(
         source_id=_stable_id("fixture-source", repository_id, source["id"]),
@@ -385,9 +377,7 @@ async def _run_vertical_slice(
         edges=(),
     )
     merge_result = _merge_result()
-    llm = FixtureOpenRouterAdapter(
-        [conflict_result, conflict_result, aligned_result, merge_result]
-    )
+    llm = FixtureOpenRouterAdapter([conflict_result, conflict_result, aligned_result, merge_result])
 
     app = create_app(settings, container=container)
     transport = httpx.ASGITransport(app=app)
@@ -501,16 +491,13 @@ async def _run_vertical_slice(
             and final_source_count > source_count_before
         ),
         "knowledgeVersionNotDuplicated": (
-            first_projection["knowledgeVersionCount"]
-            == retry_projection["knowledgeVersionCount"]
+            first_projection["knowledgeVersionCount"] == retry_projection["knowledgeVersionCount"]
         ),
         "generatedArtifactNotDuplicated": (
             first_projection["artifactCount"] == retry_projection["artifactCount"] == 1
         ),
         "knowledgeRevisionUpdatedOnce": (
-            first_projection["knowledgeRevision"]
-            == retry_projection["knowledgeRevision"]
-            == 2
+            first_projection["knowledgeRevision"] == retry_projection["knowledgeRevision"] == 2
         ),
         "generatedMarkdownUpdatedOnce": (
             render_generated_wiki(merge) == generated_markdown
@@ -727,9 +714,7 @@ class _FixtureMergeProjection:
         if artifact.event.event_name != "push":
             raise ValueError("fixture merge projection requires a push artifact")
         await self._persist_documents(artifact)
-        snapshots = await self._repository.list_knowledge_snapshots(
-            artifact.event.repository_id
-        )
+        snapshots = await self._repository.list_knowledge_snapshots(artifact.event.repository_id)
         node_by_key = {snapshot.node.logical_key: snapshot.node for snapshot in snapshots}
         for item in artifact.analysis.nodes:
             node = node_by_key.get(item.logical_key)
@@ -817,20 +802,14 @@ class _FixtureMergeProjection:
             expected_revision=artifact.knowledge_revision,
             head_sha=artifact.event.head_sha,
         )
-        snapshots = await self._repository.list_knowledge_snapshots(
-            artifact.event.repository_id
-        )
+        snapshots = await self._repository.list_knowledge_snapshots(artifact.event.repository_id)
         versions = 0
         for snapshot in snapshots:
             history = await self._repository.list_knowledge_node_versions(snapshot.node.id)
             versions += len(history)
-        artifacts = await self._repository.list_generated_artifacts(
-            artifact.event.repository_id
-        )
+        artifacts = await self._repository.list_generated_artifacts(artifact.event.repository_id)
         return {
-            "sourceCount": await self._repository.count_sources(
-                artifact.event.repository_id
-            ),
+            "sourceCount": await self._repository.count_sources(artifact.event.repository_id),
             "knowledgeNodeCount": len(snapshots),
             "knowledgeVersionCount": versions,
             "artifactCount": len(artifacts),
@@ -839,9 +818,10 @@ class _FixtureMergeProjection:
 
     async def _persist_documents(self, artifact: ValidatedAnalysisArtifact) -> None:
         for document in artifact.documents:
-            if await self._repository.get_source_version_with_source(
-                document.source_version_id
-            ) is not None:
+            if (
+                await self._repository.get_source_version_with_source(document.source_version_id)
+                is not None
+            ):
                 continue
             source_type = _allowed_source_type(document.source_type)
             source = await self._repository.add_source(
@@ -870,9 +850,7 @@ class _FixtureMergeProjection:
             )
 
     async def _verified_evidence(self, evidence: Any) -> EvidenceReference:
-        stored = await self._repository.get_source_version_with_source(
-            evidence.source_version_id
-        )
+        stored = await self._repository.get_source_version_with_source(evidence.source_version_id)
         if stored is None:
             raise ValueError("merge evidence references an unpersisted source version")
         source, version = stored
@@ -923,9 +901,7 @@ def _render_evaluation_markdown(evaluation: Mapping[str, Any]) -> str:
     for case in evaluation["cases"]:
         lines.append(
             "| {name} | {expectedOutcome} | {actualOutcome} | {evidenceQuoteValidity} "
-            "({evidenceQuoteCount}) | {provider} / {actualModel} | {passed} |".format(
-                **case
-            )
+            "({evidenceQuoteCount}) | {provider} / {actualModel} | {passed} |".format(**case)
         )
     lines.extend(
         (

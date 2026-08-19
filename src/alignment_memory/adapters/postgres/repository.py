@@ -271,9 +271,7 @@ class PostgresRepository:
                 stored = await self._knowledge_version_from_row(connection, existing)
                 if stored == version:
                     return stored
-                raise AppendOnlyViolation(
-                    "knowledge version ID already exists with different data"
-                )
+                raise AppendOnlyViolation("knowledge version ID already exists with different data")
 
             previous = await self._fetch_one(
                 connection,
@@ -288,9 +286,7 @@ class PostgresRepository:
             expected_revision = 1 if previous is None else int(previous["revision"]) + 1
             expected_supersedes = None if previous is None else str(previous["id"])
             if version.revision != expected_revision:
-                raise AppendOnlyViolation(
-                    f"knowledge revision must be {expected_revision}"
-                )
+                raise AppendOnlyViolation(f"knowledge revision must be {expected_revision}")
             if version.supersedes_version_id != expected_supersedes:
                 raise AppendOnlyViolation(
                     "new knowledge version must supersede the previous version"
@@ -383,9 +379,7 @@ class PostgresRepository:
                 """,
                 (revision, revision, repository_id),
             )
-            return tuple(
-                [await self._knowledge_version_from_row(connection, row) for row in rows]
-            )
+            return tuple([await self._knowledge_version_from_row(connection, row) for row in rows])
 
     async def create_job(self, job: Job) -> Job:
         async with self._connection_scope() as connection:
@@ -545,9 +539,7 @@ class PostgresRepository:
                 )
                 if stored == alignment:
                     return stored
-                raise AppendOnlyViolation(
-                    "validated result already exists with different data"
-                )
+                raise AppendOnlyViolation("validated result already exists with different data")
 
             for finding in alignment.findings:
                 await connection.execute(
@@ -564,11 +556,7 @@ class PostgresRepository:
                         finding.finding_type.value,
                         finding.target_node_id,
                         finding.target_node_type.value if finding.target_node_type else None,
-                        (
-                            finding.target_node_status.value
-                            if finding.target_node_status
-                            else None
-                        ),
+                        (finding.target_node_status.value if finding.target_node_status else None),
                         finding.contradicts,
                         finding.uncertain,
                         finding.explanation,
@@ -597,11 +585,7 @@ class PostgresRepository:
                 """,
                 (job_id,),
             )
-            return (
-                await self._alignment_from_row(connection, row)
-                if row is not None
-                else None
-            )
+            return await self._alignment_from_row(connection, row) if row is not None else None
 
     async def get_alignment(self, alignment_id: str) -> Alignment | None:
         async with self._connection_scope() as connection:
@@ -610,11 +594,7 @@ class PostgresRepository:
                 "select * from alignment_analyses where id = %s",
                 (alignment_id,),
             )
-            return (
-                await self._alignment_from_row(connection, row)
-                if row is not None
-                else None
-            )
+            return await self._alignment_from_row(connection, row) if row is not None else None
 
     async def list_jobs(self, repository_id: str) -> tuple[Job, ...]:
         async with self._connection_scope() as connection:
@@ -682,9 +662,7 @@ class PostgresRepository:
                     """,
                     (run.id, run.job_id, run.input_hash, run.prompt_version),
                 )
-                stored = self._ai_run_from_row(
-                    self._required(row, "AI run conflict disappeared")
-                )
+                stored = self._ai_run_from_row(self._required(row, "AI run conflict disappeared"))
                 if stored == run:
                     return stored
                 raise AppendOnlyViolation("AI run input already exists with different data")
@@ -843,6 +821,82 @@ class PostgresRepository:
                 (repository_id, profile_id),
             )
         return self._membership_from_row(row) if row is not None else None
+
+    async def upsert_installation(
+        self,
+        github_installation_id: int,
+        account_id: int,
+        permissions: dict,
+    ) -> str:
+        """Upsert a GitHub App installation record. Returns the installation UUID."""
+        async with self._connection_scope() as connection:
+            row = await self._fetch_one(
+                connection,
+                """
+                insert into github_installations
+                    (github_installation_id, account_id, permissions, updated_at)
+                values (%s, %s, %s, now())
+                on conflict (github_installation_id) do update set
+                    permissions = excluded.permissions,
+                    updated_at = now()
+                returning id
+                """,
+                (github_installation_id, account_id, Jsonb(permissions)),
+            )
+        if row is None:
+            raise RuntimeError("upsert_installation returned no row")
+        return str(row["id"])
+
+    async def upsert_repository(
+        self,
+        github_repo_id: int,
+        installation_uuid: str,
+        owner: str,
+        name: str,
+        default_branch: str,
+    ) -> str:
+        """Upsert a repository record. Returns the repository UUID."""
+        async with self._connection_scope() as connection:
+            row = await self._fetch_one(
+                connection,
+                """
+                insert into repositories
+                    (github_repository_id, installation_id, owner, name, default_branch, updated_at)
+                values (%s, %s, %s, %s, %s, now())
+                on conflict (github_repository_id) do update set
+                    installation_id = excluded.installation_id,
+                    owner = excluded.owner,
+                    name = excluded.name,
+                    default_branch = excluded.default_branch,
+                    updated_at = now()
+                returning id
+                """,
+                (github_repo_id, installation_uuid, owner, name, default_branch),
+            )
+        if row is None:
+            raise RuntimeError("upsert_repository returned no row")
+        return str(row["id"])
+
+    async def upsert_membership(
+        self,
+        repository_id: str,
+        profile_id: str,
+        permission: str,
+    ) -> None:
+        """Upsert a repository membership record."""
+        async with self._connection_scope() as connection, connection.cursor() as cursor:
+            await cursor.execute(
+                """
+                    insert into repository_memberships
+                        (repository_id, profile_id, github_permission, active, updated_at)
+                    values (%s, %s, %s, true, now())
+                    on conflict (repository_id, profile_id) do update set
+                        github_permission = excluded.github_permission,
+                        active = true,
+                        updated_at = now()
+                    """,
+                (repository_id, profile_id, permission),
+            )
 
     async def list_knowledge_snapshots(
         self,
@@ -1186,9 +1240,7 @@ class PostgresRepository:
             created_by=row["created_by"],
             ai_run_id=str(row["ai_run_id"]) if row["ai_run_id"] else None,
             supersedes_version_id=(
-                str(row["supersedes_version_id"])
-                if row["supersedes_version_id"]
-                else None
+                str(row["supersedes_version_id"]) if row["supersedes_version_id"] else None
             ),
             created_at=row["created_at"],
             evidence=await self._evidence_for_target(
@@ -1295,9 +1347,7 @@ class PostgresRepository:
             external_version=row["external_version"],
             content=row["content"],
             content_hash=row["content_hash"],
-            author_profile_id=(
-                str(row["author_profile_id"]) if row["author_profile_id"] else None
-            ),
+            author_profile_id=(str(row["author_profile_id"]) if row["author_profile_id"] else None),
             occurred_at=row["occurred_at"],
             ingested_at=row["ingested_at"],
         )
@@ -1352,9 +1402,7 @@ class PostgresRepository:
             reason=row["reason"],
             actor_profile_id=str(row["actor_profile_id"]),
             created_node_version_id=(
-                str(row["created_node_version_id"])
-                if row["created_node_version_id"]
-                else None
+                str(row["created_node_version_id"]) if row["created_node_version_id"] else None
             ),
             created_at=row["created_at"],
         )

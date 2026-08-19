@@ -70,9 +70,7 @@ class Settings(BaseSettings):
                 or parsed.username
                 or parsed.password
             ):
-                raise RuntimeError(
-                    "CORS_ALLOWED_ORIGINS must contain explicit http(s) origins"
-                )
+                raise RuntimeError("CORS_ALLOWED_ORIGINS must contain explicit http(s) origins")
         return origins
 
     def validate_runtime(self) -> None:
@@ -101,9 +99,7 @@ class Settings(BaseSettings):
         if is_missing(self.supabase_jwt_secret) and is_missing(self.supabase_jwks_url):
             missing.append("SUPABASE_JWKS_URL or SUPABASE_JWT_SECRET")
         if missing:
-            raise RuntimeError(
-                "live mode configuration is incomplete: " + ", ".join(missing)
-            )
+            raise RuntimeError("live mode configuration is incomplete: " + ", ".join(missing))
 
 
 @lru_cache

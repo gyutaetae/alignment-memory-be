@@ -38,9 +38,7 @@ def render_pr_comment(artifact: ValidatedAnalysisArtifact) -> str:
         raise ValueError("only pull request artifacts can render a PR comment")
     outcome = _OUTCOME_LABELS[artifact.analysis.outcome]
     findings = _sorted_findings(artifact.analysis.findings)
-    evidence = _sorted_evidence(
-        item for finding in findings for item in finding.evidence
-    )
+    evidence = _sorted_evidence(item for finding in findings for item in finding.evidence)
 
     existing = _existing_agreement(findings, evidence)
     reasons = (
@@ -49,39 +47,40 @@ def render_pr_comment(artifact: ValidatedAnalysisArtifact) -> str:
         else "- No supported conflict was found in the validated project context."
     )
     next_actions = (
-        "\n".join(
-            f"- {_markdown_text(finding.recommended_action)}" for finding in findings
-        )
+        "\n".join(f"- {_markdown_text(finding.recommended_action)}" for finding in findings)
         if findings
         else "- Continue review and merge when the normal project checks pass."
     )
     evidence_block = _comment_evidence(evidence)
-    return "\n".join(
-        (
-            comment_marker(artifact),
-            f"<!-- alignment-memory:head:{artifact.event.head_sha} -->",
-            f"## Alignment Memory — {outcome}",
-            "",
-            f"**Textual outcome:** {outcome}",
-            "",
-            "### Existing agreement",
-            existing,
-            "",
-            "### Proposed change",
-            _markdown_text(artifact.event.proposed_change),
-            "",
-            "### Exact quote + source URL",
-            evidence_block,
-            "",
-            "### Reason",
-            reasons,
-            "",
-            "### Next action",
-            next_actions,
-            "",
-            f"Analyzed head SHA: `{artifact.event.head_sha}`",
-        )
-    ).rstrip() + "\n"
+    return (
+        "\n".join(
+            (
+                comment_marker(artifact),
+                f"<!-- alignment-memory:head:{artifact.event.head_sha} -->",
+                f"## Alignment Memory — {outcome}",
+                "",
+                f"**Textual outcome:** {outcome}",
+                "",
+                "### Existing agreement",
+                existing,
+                "",
+                "### Proposed change",
+                _markdown_text(artifact.event.proposed_change),
+                "",
+                "### Exact quote + source URL",
+                evidence_block,
+                "",
+                "### Reason",
+                reasons,
+                "",
+                "### Next action",
+                next_actions,
+                "",
+                f"Analyzed head SHA: `{artifact.event.head_sha}`",
+            )
+        ).rstrip()
+        + "\n"
+    )
 
 
 def render_check_summary(artifact: ValidatedAnalysisArtifact) -> str:
@@ -89,9 +88,7 @@ def render_check_summary(artifact: ValidatedAnalysisArtifact) -> str:
         raise ValueError("only pull request artifacts can render a check summary")
     outcome = _OUTCOME_LABELS[artifact.analysis.outcome]
     findings = _sorted_findings(artifact.analysis.findings)
-    evidence = _sorted_evidence(
-        item for finding in findings for item in finding.evidence
-    )
+    evidence = _sorted_evidence(item for finding in findings for item in finding.evidence)
     evidence_line = (
         f'"{_markdown_text(evidence[0].exact_quote)}" — {evidence[0].url}'
         if evidence
@@ -103,9 +100,7 @@ def render_check_summary(artifact: ValidatedAnalysisArtifact) -> str:
         else "No supported conflict was found in the validated project context."
     )
     next_action = (
-        _markdown_text(findings[0].recommended_action)
-        if findings
-        else "Continue normal review."
+        _markdown_text(findings[0].recommended_action) if findings else "Continue normal review."
     )
     return "\n".join(
         (
@@ -147,10 +142,7 @@ def render_generated_wiki(artifact: ValidatedAnalysisArtifact) -> str:
         "",
     ]
     if nodes:
-        lines.extend(
-            f"- {_wikilink(node)}"
-            for node in nodes
-        )
+        lines.extend(f"- {_wikilink(node)}" for node in nodes)
     else:
         lines.append("- No validated knowledge nodes were produced.")
 
@@ -175,15 +167,11 @@ def render_generated_wiki(artifact: ValidatedAnalysisArtifact) -> str:
         for edge in edges:
             from_node = indexed_nodes.get(edge.from_node_logical_key)
             to_node = indexed_nodes.get(edge.to_node_logical_key)
-            from_link = _wikilink(from_node) if from_node else _markdown_text(
-                edge.from_node_logical_key
+            from_link = (
+                _wikilink(from_node) if from_node else _markdown_text(edge.from_node_logical_key)
             )
-            to_link = _wikilink(to_node) if to_node else _markdown_text(
-                edge.to_node_logical_key
-            )
-            lines.append(
-                f"- {from_link} — {_markdown_text(edge.relation_type)} → {to_link}"
-            )
+            to_link = _wikilink(to_node) if to_node else _markdown_text(edge.to_node_logical_key)
+            lines.append(f"- {from_link} — {_markdown_text(edge.relation_type)} → {to_link}")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -278,21 +266,26 @@ def _sorted_evidence(evidence: object) -> tuple[AnalysisEvidence, ...]:
         (item.source_version_id, str(item.url), item.exact_quote, item.role.value): item
         for item in items
     }
-    return tuple(sorted(unique.values(), key=lambda item: tuple(map(str, (
-        item.url,
-        item.source_version_id,
-        item.exact_quote,
-        item.role.value,
-    )))))
+    return tuple(
+        sorted(
+            unique.values(),
+            key=lambda item: tuple(
+                map(
+                    str,
+                    (
+                        item.url,
+                        item.source_version_id,
+                        item.exact_quote,
+                        item.role.value,
+                    ),
+                )
+            ),
+        )
+    )
 
 
 def _markdown_text(value: str) -> str:
-    return (
-        value.replace("\x00", "")
-        .replace("<!--", "&lt;!--")
-        .replace("-->", "--&gt;")
-        .strip()
-    )
+    return value.replace("\x00", "").replace("<!--", "&lt;!--").replace("-->", "--&gt;").strip()
 
 
 def _heading_text(value: str) -> str:

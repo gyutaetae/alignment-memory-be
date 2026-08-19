@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import NAMESPACE_URL, uuid4, uuid5
@@ -35,6 +36,7 @@ from alignment_memory.interfaces.api.schemas import (
     InternalJobEvent,
     OverrideCreate,
     PassportGenerate,
+    RegisterInstallationRequest,
     WorkerResult,
 )
 from alignment_memory.interfaces.api.security import (
@@ -85,6 +87,85 @@ async def github_installation_callback(
         "installationId": installation_id,
         "repositories": [_repository_payload(record) for record in records],
     }
+
+
+@router.post(
+    "/repositories/register",
+    tags=["repositories"],
+    status_code=status.HTTP_201_CREATED,
+)
+async def register_installation(
+    body: RegisterInstallationRequest,
+    user: User,
+    container: Container,
+) -> dict[str, object]:
+    """Register a GitHub App installation and its repositories."""
+    from alignment_memory.adapters.github import GitHubAppAdapter
+    from alignment_memory.adapters.postgres import PostgresRepository
+
+    github = container.github
+    if not isinstance(github, GitHubAppAdapter):
+        raise ApiError(
+            status_code=501,
+            code="registration_not_available",
+            message="Registration requires live GitHub integration",
+        )
+    repository = container.require_repository()
+    if not isinstance(repository, PostgresRepository):
+        raise ApiError(
+            status_code=501,
+            code="registration_not_available",
+            message="Registration requires persistent storage",
+        )
+
+    installation_info = await github.get_installation_info(body.installation_id)
+    account = installation_info.get("account", {})
+    account_id = account.get("id", 0)
+    permissions = installation_info.get("permissions", {})
+
+    installation_uuid = await repository.upsert_installation(
+        github_installation_id=body.installation_id,
+        account_id=int(account_id),
+        permissions=permissions,
+    )
+
+    repos = await github.list_installation_repos(body.installation_id)
+    registered: list[dict[str, object]] = []
+    for repo in repos:
+        repo_id = repo.get("id")
+        owner = repo.get("owner", {}).get("login", "")
+        name = repo.get("name", "")
+        default_branch = repo.get("default_branch", "main")
+        if not repo_id or not owner or not name:
+            continue
+        repository_uuid = await repository.upsert_repository(
+            github_repo_id=int(repo_id),
+            installation_uuid=installation_uuid,
+            owner=owner,
+            name=name,
+            default_branch=default_branch,
+        )
+        await repository.upsert_membership(
+            repository_id=repository_uuid,
+            profile_id=user.profile_id,
+            permission="admin",
+        )
+        registered.append(
+            {
+                "id": repository_uuid,
+                "githubRepositoryId": int(repo_id),
+                "githubInstallationId": body.installation_id,
+                "owner": owner,
+                "name": name,
+                "fullName": f"{owner}/{name}",
+                "defaultBranch": default_branch,
+                "baselineCommitSha": None,
+                "mainCommitSha": None,
+                "knowledgeRevision": 0,
+            }
+        )
+
+    return {"repositories": registered}
 
 
 @router.post(
@@ -309,6 +390,14 @@ async def generate_context_passport(
             message="A Context Passport requires validated source evidence",
         )
     explanations = " ".join(finding.explanation for finding in alignment.findings)
+    passport_content = f"Alignment outcome: {alignment.outcome.value}. {explanations}".strip()
+    if container.llm is not None and hasattr(container.llm, "generate_passport"):
+        with contextlib.suppress(Exception):
+            passport_content = await container.llm.generate_passport(
+                findings_text=explanations,
+                outcome=alignment.outcome.value,
+                language=body.language,
+            )
     passport = await repository.append_context_passport(
         ContextPassport(
             id=_stable_id(
@@ -321,7 +410,7 @@ async def generate_context_passport(
             analysis_id=alignment.id,
             profile_id=user.profile_id,
             language=body.language,
-            content=f"Alignment outcome: {alignment.outcome.value}. {explanations}".strip(),
+            content=passport_content,
             source_version_ids=source_version_ids,
             ambiguities=(),
             ai_run_id=alignment.ai_run_id,
@@ -546,9 +635,7 @@ async def persist_internal_result(
     evidence_sets.extend(edge.evidence for edge in body.analysis.edges)
     for evidence_set in evidence_sets:
         for evidence in evidence_set:
-            stored = await repository.get_source_version_with_source(
-                evidence.source_version_id
-            )
+            stored = await repository.get_source_version_with_source(evidence.source_version_id)
             if stored is None:
                 raise ApiError(
                     status_code=422,
