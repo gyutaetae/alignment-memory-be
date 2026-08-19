@@ -55,9 +55,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           INPUT_JOB_ID: ${{ github.event.inputs.jobId }}
           INTERNAL_HMAC_SECRET: ${{ secrets.INTERNAL_HMAC_SECRET }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_FALLBACK_MODEL: ${{ vars.OPENROUTER_FALLBACK_MODEL || 'google/gemini-2.5-flash' }}
-          OPENROUTER_PRIMARY_MODEL: ${{ vars.OPENROUTER_PRIMARY_MODEL || 'openai/gpt-4.1-mini' }}
+          LLM_PROVIDER: openai
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_FALLBACK_MODEL: ${{ vars.OPENAI_FALLBACK_MODEL }}
+          OPENAI_PRIMARY_MODEL: ${{ vars.OPENAI_PRIMARY_MODEL || 'gpt-4.1-mini' }}
         run: >-
           uv run python -m alignment_memory.interfaces.worker.cli
           analyze-event --event-path "$GITHUB_EVENT_PATH"

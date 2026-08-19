@@ -19,6 +19,7 @@ from alignment_memory.adapters.github import (
     GitHubAppAdapter,
     GitHubAppCredentials,
 )
+from alignment_memory.adapters.openai import OpenAIAdapter, OpenAIConfig
 from alignment_memory.adapters.openrouter import OpenRouterAdapter, OpenRouterConfig
 from alignment_memory.interfaces.worker.api_client import HmacApiClient, WorkerApiError
 from alignment_memory.interfaces.worker.event_parser import (
@@ -47,11 +48,13 @@ from alignment_memory.ports import (
     GitHubRepositoryRef,
     LlmAnalysis,
 )
+from alignment_memory.settings import Settings
 
 _PROMPT_VERSION = "alignment-worker-v1"
 
 
 def build_parser() -> argparse.ArgumentParser:
+    settings = Settings()
     parser = argparse.ArgumentParser(prog="alignment-memory-worker")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -67,18 +70,39 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--output", type=Path, required=True)
     analyze.add_argument("--api-base-url", default=os.getenv("ALIGNMENT_API_BASE_URL"))
     analyze.add_argument("--api-hmac-secret", default=os.getenv("INTERNAL_HMAC_SECRET"))
-    analyze.add_argument("--openrouter-api-key", default=os.getenv("OPENROUTER_API_KEY"))
+    analyze.add_argument(
+        "--llm-provider",
+        choices=("openai", "openrouter"),
+        default=settings.llm_provider,
+    )
+    analyze.add_argument("--openai-api-key", default=settings.openai_api_key)
+    analyze.add_argument("--openai-primary-model", default=settings.openai_primary_model)
+    analyze.add_argument("--openai-fallback-model", default=settings.openai_fallback_model)
+    analyze.add_argument("--openai-base-url", default=settings.openai_base_url)
+    analyze.add_argument(
+        "--openai-timeout-seconds", type=float, default=settings.openai_timeout_seconds
+    )
+    analyze.add_argument(
+        "--openai-max-retries", type=int, default=settings.openai_max_retries
+    )
+    analyze.add_argument("--openrouter-api-key", default=settings.openrouter_api_key)
     analyze.add_argument(
         "--openrouter-primary-model",
-        default=os.getenv("OPENROUTER_PRIMARY_MODEL", "openai/gpt-4.1-mini"),
+        default=settings.openrouter_primary_model,
     )
     analyze.add_argument(
         "--openrouter-fallback-model",
-        default=os.getenv("OPENROUTER_FALLBACK_MODEL", "google/gemini-2.5-flash"),
+        default=settings.openrouter_fallback_model,
     )
     analyze.add_argument(
         "--openrouter-base-url",
-        default=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+        default=settings.openrouter_base_url,
+    )
+    analyze.add_argument(
+        "--openrouter-timeout-seconds", type=float, default=settings.openrouter_timeout_seconds
+    )
+    analyze.add_argument(
+        "--openrouter-max-retries", type=int, default=settings.openrouter_max_retries
     )
     analyze.add_argument("--github-token", default=os.getenv("GITHUB_TOKEN"))
     analyze.add_argument(
@@ -127,6 +151,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
+def _build_llm_adapter(args: argparse.Namespace) -> OpenAIAdapter | OpenRouterAdapter:
+    if args.llm_provider == "openai":
+        return OpenAIAdapter(
+            _required(args.openai_api_key, "OpenAI API key"),
+            OpenAIConfig(
+                primary_model=_required(args.openai_primary_model, "OpenAI primary model"),
+                fallback_model=args.openai_fallback_model or None,
+                base_url=_required(args.openai_base_url, "OpenAI base URL"),
+                timeout_seconds=args.openai_timeout_seconds,
+                max_retries=args.openai_max_retries,
+            ),
+        )
+    return OpenRouterAdapter(
+        _required(args.openrouter_api_key, "OpenRouter API key"),
+        OpenRouterConfig(
+            primary_model=_required(args.openrouter_primary_model, "OpenRouter primary model"),
+            fallback_model=args.openrouter_fallback_model or None,
+            base_url=_required(args.openrouter_base_url, "OpenRouter base URL"),
+            timeout_seconds=args.openrouter_timeout_seconds,
+            max_retries=args.openrouter_max_retries,
+        ),
+    )
+
+
 async def _run_analyze_command(args: argparse.Namespace) -> None:
     event_name = _required(args.event_name, "GitHub event name")
     payload = load_github_event(args.event_path)
@@ -139,14 +187,7 @@ async def _run_analyze_command(args: argparse.Namespace) -> None:
         _required(args.api_base_url, "Alignment API base URL"),
         _required(args.api_hmac_secret, "internal API HMAC secret"),
     )
-    llm = OpenRouterAdapter(
-        _required(args.openrouter_api_key, "OpenRouter API key"),
-        OpenRouterConfig(
-            primary_model=_required(args.openrouter_primary_model, "OpenRouter primary model"),
-            fallback_model=args.openrouter_fallback_model or None,
-            base_url=_required(args.openrouter_base_url, "OpenRouter base URL"),
-        ),
-    )
+    llm = _build_llm_adapter(args)
     github = GitHubAppAdapter(
         GitHubAppCredentials(app_id="workflow-token", private_key="unused"),
         config=GitHubAdapterConfig(api_base_url=args.github_api_base_url),
@@ -177,7 +218,7 @@ async def analyze_event(
     prompt_version: str,
     api: HmacApiClient,
     github: GitHubAppAdapter,
-    llm: OpenRouterAdapter,
+    llm: OpenAIAdapter | OpenRouterAdapter,
 ) -> ValidatedAnalysisArtifact:
     job_id: str | None = supplied_job_id
     current_status: str | None = None

@@ -14,6 +14,7 @@ from alignment_memory.adapters.github import (
     GitHubAppCredentials,
 )
 from alignment_memory.adapters.memory import InMemoryRepository
+from alignment_memory.adapters.openai import OpenAIAdapter, OpenAIConfig
 from alignment_memory.adapters.openrouter import (
     FixtureOpenRouterAdapter,
     OpenRouterAdapter,
@@ -141,8 +142,19 @@ class AppContainer:
                 sync_workflow=settings.github_sync_workflow,
             ),
         )
-        self.llm = (
-            OpenRouterAdapter(
+        if settings.llm_provider == "openai" and settings.openai_api_key:
+            self.llm = OpenAIAdapter(
+                settings.openai_api_key,
+                OpenAIConfig(
+                    primary_model=settings.openai_primary_model,
+                    fallback_model=settings.openai_fallback_model or None,
+                    base_url=settings.openai_base_url,
+                    timeout_seconds=settings.openai_timeout_seconds,
+                    max_retries=settings.openai_max_retries,
+                ),
+            )
+        elif settings.llm_provider == "openrouter" and settings.openrouter_api_key:
+            self.llm = OpenRouterAdapter(
                 settings.openrouter_api_key,
                 OpenRouterConfig(
                     primary_model=settings.openrouter_primary_model,
@@ -152,9 +164,8 @@ class AppContainer:
                     max_retries=settings.openrouter_max_retries,
                 ),
             )
-            if settings.openrouter_api_key
-            else None
-        )
+        else:
+            self.llm = None
 
     async def start(self) -> None:
         if self._started:

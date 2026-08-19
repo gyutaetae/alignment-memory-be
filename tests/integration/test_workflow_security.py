@@ -37,7 +37,7 @@ def test_analyze_has_read_only_permissions_and_analysis_secrets() -> None:
 
     assert permissions
     assert set(permissions.values()) == {"read"}
-    assert "OPENROUTER_API_KEY" in source
+    assert "OPENAI_API_KEY" in source
     assert "INTERNAL_HMAC_SECRET" in source
     assert "actions/upload-artifact@v4" in source
     assert job["runs-on"] == "ubuntu-latest"
@@ -56,6 +56,7 @@ def test_publish_has_only_required_write_boundary_and_no_model_secret() -> None:
         "issues": "write",
         "pull-requests": "write",
     }
+    assert "OPENAI_API_KEY" not in source
     assert "OPENROUTER_API_KEY" not in source
     assert "actions/download-artifact@v4" in source
     assert "github.event.repository.default_branch" in source
