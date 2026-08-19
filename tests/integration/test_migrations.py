@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from psycopg import AsyncConnection
 
-_ROOT = Path(__file__).resolve().parents[3]
+_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION_DIR = _ROOT / "supabase" / "migrations"
 _MIGRATIONS = tuple(sorted(_MIGRATION_DIR.glob("*.sql")))
 _SQL = "\n".join(path.read_text() for path in _MIGRATIONS).lower()

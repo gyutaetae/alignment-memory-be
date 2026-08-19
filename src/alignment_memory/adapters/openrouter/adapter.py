@@ -244,7 +244,7 @@ class OpenRouterAdapter:
                 "json_schema": {
                     "name": "alignment_result",
                     "strict": True,
-                    "schema": AnalysisResult.model_json_schema(),
+                    "schema": self._response_schema(),
                 },
             },
         }
@@ -300,6 +300,9 @@ class OpenRouterAdapter:
 
     def _provider_request_fields(self) -> dict[str, Any]:
         return {"provider": {"require_parameters": True}}
+
+    def _response_schema(self) -> dict[str, Any]:
+        return AnalysisResult.model_json_schema()
 
     def _raise_http_error(self, response: httpx.Response, *, retryable: bool) -> None:
         if response.status_code == 401:

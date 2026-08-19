@@ -131,7 +131,7 @@ async def _evaluate_six_fixtures() -> tuple[dict[str, Any], dict[str, Alignment]
                 "actualModel": "fixture-model",
                 "liveProof": False,
                 "disclaimer": (
-                    "Deterministic local fixtures; this is not GitHub, OpenRouter, "
+                    "Deterministic local fixtures; this is not GitHub, OpenAI, "
                     "Supabase, or Vercel live proof."
                 ),
             },
@@ -883,7 +883,7 @@ def _render_evaluation_markdown(evaluation: Mapping[str, Any]) -> str:
     lines = [
         "# Alignment Memory Fixture Evaluation",
         "",
-        "> **Fixture-only proof.** No live GitHub, OpenRouter, Supabase, or Vercel "
+        "> **Fixture-only proof.** No live GitHub, OpenAI, Supabase, or Vercel "
         "service was called. Do not present this report as external AI or deployment proof.",
         "",
         "## Execution provenance",

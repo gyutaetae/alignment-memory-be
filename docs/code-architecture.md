@@ -22,7 +22,7 @@ knowledge/generated      only AI-writable repository path
 interfaces → application → domain ← ports ← adapters
 ```
 
-- `domain` imports no FastAPI, GitHub, OpenRouter, or Supabase code.
+- `domain` imports no FastAPI, GitHub, LLM provider, or Supabase code.
 - `application` coordinates use cases through ports.
 - `adapters` implement ports; external SDK models do not leak into domain types.
 - API and Worker share schemas and use cases; they do not duplicate analysis rules.
@@ -42,7 +42,7 @@ backend/
     domain/{entities,enums,errors,policies}/
     application/{commands,queries,services}/
     ports/{github,llm,repositories,clock}/
-    adapters/{github,openrouter,supabase}/
+    adapters/{github,openai,openrouter,supabase}/
     contracts/                 # Pydantic boundary schemas
     interfaces/
       api/{main,dependencies,routes}/
@@ -71,7 +71,7 @@ docs/
 - Create jobs, dispatch workflow, serve polling reads.
 - Persist signed, validated Worker results transactionally.
 - Serve dashboard, graph, Alignment, Handshake, and Override APIs.
-- Never perform long OpenRouter work or push Git commits.
+- Never perform long LLM work or push Git commits.
 
 ### Action Analyze Job
 
@@ -79,14 +79,14 @@ docs/
 - Collect only allowed GitHub material.
 - Normalize and content-hash inputs.
 - Retrieve active project context.
-- Call OpenRouter with fixed schema and configurable model list.
+- Call OpenAI with a fixed schema and configurable model list.
 - Validate Pydantic shape, exact evidence quote, allowed node types, and conflict preconditions.
 - Send HMAC-signed progress/result to FastAPI.
 - Produce a schema-validated artifact for Publish Job; no GitHub write permission.
 
 ### Action Publish Job
 
-- Does not receive `OPENROUTER_API_KEY`.
+- Does not receive `OPENAI_API_KEY`.
 - Renders comments and Markdown from fixed templates; model output cannot select paths.
 - Writes only PR comments and `knowledge/generated/**` with explicit permissions.
 - Rechecks `main` SHA; never force-pushes.
@@ -151,7 +151,7 @@ Return errors as `{error: {code, message, retryable, requestId}}`. Do not expose
 ## Test boundaries
 
 - Domain unit tests: state transitions, conflict preconditions, override behavior, idempotency.
-- Adapter contract tests: GitHub fixtures, OpenRouter schema/error mapping, HMAC verification.
+- Adapter contract tests: GitHub fixtures, OpenAI schema/error mapping, HMAC verification.
 - Integration tests: Supabase migrations/RLS and versioned persistence.
 - Frontend tests: status priority, evidence reveal, Handshake/Override separation.
 - One Playwright happy path may be added after the core flow works.
@@ -166,7 +166,7 @@ Return errors as `{error: {code, message, retryable, requestId}}`. Do not expose
   deploy that image to the selected container host.
 - Database/Auth: Supabase.
 - Worker: GitHub-hosted Actions.
-- Runtime AI: OpenRouter; Codex Pro is a development agent, not application runtime.
+- Runtime AI: OpenAI by default, with OpenRouter retained as an explicit compatibility option; Codex Pro is a development agent, not application runtime.
 
 ## Architecture principles
 
