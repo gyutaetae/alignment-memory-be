@@ -52,6 +52,9 @@ class OpenRouterConfig:
 class OpenRouterAdapter:
     """OpenRouter chat-completions adapter with deterministic model fallback."""
 
+    provider_name = "openrouter"
+    provider_label = "OpenRouter"
+
     def __init__(
         self,
         api_key: str,
@@ -61,7 +64,7 @@ class OpenRouterAdapter:
         sleep: Sleep = asyncio.sleep,
     ) -> None:
         if not api_key.strip():
-            raise ValueError("OpenRouter API key is required")
+            raise ValueError(f"{self.provider_label} API key is required")
         self._api_key = api_key
         self._config = config
         self._client = client or httpx.AsyncClient(
@@ -121,7 +124,7 @@ class OpenRouterAdapter:
         outcome: str,
         language: str,
     ) -> str:
-        """Generate a localized Context Passport explanation via OpenRouter."""
+        """Generate a localized Context Passport explanation via the configured provider."""
         system_prompt = (
             "You are a technical communication specialist. "
             "Your job is to explain code alignment findings to a specific stakeholder "
@@ -182,27 +185,33 @@ class OpenRouterAdapter:
 
         choices = payload.get("choices")
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-            raise LlmValidationError("OpenRouter response has no completion choice")
+            raise LlmValidationError(
+                f"{self.provider_label} response has no completion choice"
+            )
         choice = choices[0]
         if choice.get("finish_reason") == "error" or isinstance(choice.get("error"), dict):
             raise LlmProviderError(
                 "llm_generation_failed",
-                "OpenRouter generation failed",
+                f"{self.provider_label} generation failed",
                 retryable=True,
                 status_code=502,
             )
         message = choice.get("message")
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
-            raise LlmValidationError("OpenRouter completion content is missing")
+            raise LlmValidationError(
+                f"{self.provider_label} completion content is missing"
+            )
         try:
             raw_result = json.loads(message["content"])
         except json.JSONDecodeError as error:
-            raise LlmValidationError("OpenRouter completion is not valid JSON") from error
+            raise LlmValidationError(
+                f"{self.provider_label} completion is not valid JSON"
+            ) from error
         try:
             result = AnalysisResult.model_validate(raw_result)
         except ValidationError as error:
             raise LlmValidationError(
-                "OpenRouter completion does not match AnalysisResult"
+                f"{self.provider_label} completion does not match AnalysisResult"
             ) from error
         validate_analysis_result_evidence(result, request.documents)
 
@@ -212,7 +221,7 @@ class OpenRouterAdapter:
         return LlmAnalysis(
             run_id=request.stable_run_id,
             result=result,
-            provider="openrouter",
+            provider=self.provider_name,
             requested_model=model,
             actual_model=actual_model,
             prompt_version=request.prompt_version,
@@ -225,12 +234,11 @@ class OpenRouterAdapter:
         request: AnalysisRequest,
         model: str,
     ) -> httpx.Response:
-        body = {
+        body: dict[str, Any] = {
             "model": model,
             "messages": build_messages(request),
             "temperature": 0,
             "stream": False,
-            "provider": {"require_parameters": True},
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
@@ -240,6 +248,7 @@ class OpenRouterAdapter:
                 },
             },
         }
+        body.update(self._provider_request_fields())
         for attempt in range(self._config.max_retries + 1):
             try:
                 response = await self._client.post(
@@ -262,7 +271,7 @@ class OpenRouterAdapter:
                     continue
                 raise LlmProviderError(
                     "llm_network_error",
-                    "OpenRouter network request failed",
+                    f"{self.provider_label} network request failed",
                     retryable=True,
                 ) from error
 
@@ -276,7 +285,7 @@ class OpenRouterAdapter:
 
         raise LlmProviderError(
             "llm_provider_failed",
-            "OpenRouter request failed",
+            f"{self.provider_label} request failed",
             retryable=True,
         )
 
@@ -289,19 +298,20 @@ class OpenRouterAdapter:
                 pass
         return min(float(2**attempt), self._config.max_retry_delay_seconds)
 
-    @staticmethod
-    def _raise_http_error(response: httpx.Response, *, retryable: bool) -> None:
+    def _provider_request_fields(self) -> dict[str, Any]:
+        return {"provider": {"require_parameters": True}}
+
+    def _raise_http_error(self, response: httpx.Response, *, retryable: bool) -> None:
         if response.status_code == 401:
             raise LlmAuthenticationError()
         raise LlmProviderError(
             "llm_provider_failed",
-            f"OpenRouter request failed with status {response.status_code}",
+            f"{self.provider_label} request failed with status {response.status_code}",
             retryable=retryable,
             status_code=response.status_code,
         )
 
-    @staticmethod
-    def _raise_embedded_error(payload: Mapping[str, Any]) -> None:
+    def _raise_embedded_error(self, payload: Mapping[str, Any]) -> None:
         error = payload.get("error")
         if not isinstance(error, Mapping):
             return
@@ -312,19 +322,20 @@ class OpenRouterAdapter:
         retryable = status_code in {408, 429, 500, 502, 503, 504}
         raise LlmProviderError(
             "llm_generation_failed",
-            "OpenRouter returned a generation error",
+            f"{self.provider_label} returned a generation error",
             retryable=retryable,
             status_code=status_code,
         )
 
-    @staticmethod
-    def _json_object(response: httpx.Response) -> dict[str, Any]:
+    def _json_object(self, response: httpx.Response) -> dict[str, Any]:
         try:
             payload = response.json()
         except ValueError as error:
-            raise LlmValidationError("OpenRouter response is not JSON") from error
+            raise LlmValidationError(
+                f"{self.provider_label} response is not JSON"
+            ) from error
         if not isinstance(payload, dict):
-            raise LlmValidationError("OpenRouter response is not an object")
+            raise LlmValidationError(f"{self.provider_label} response is not an object")
         return payload
 
     @staticmethod

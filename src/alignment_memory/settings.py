@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     github_api_timeout_seconds: float = 15.0
     github_api_max_retries: int = 2
 
+    llm_provider: Literal["openai", "openrouter"] = "openai"
+    openai_api_key: str | None = None
+    openai_primary_model: str = "gpt-4.1-mini"
+    openai_fallback_model: str | None = None
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_timeout_seconds: float = 30.0
+    openai_max_retries: int = 2
+
     openrouter_api_key: str | None = None
     openrouter_primary_model: str = "openai/gpt-4.1-mini"
     openrouter_fallback_model: str = "google/gemini-2.5-flash"
