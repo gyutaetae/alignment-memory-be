@@ -226,7 +226,9 @@ async def analyze_event(
                 actor_login=event.actor_login,
             )
         else:
-            if not await github.actor_is_allowed(repository_ref, event.actor_login):
+            if event.event_name != "workflow_dispatch" and not await github.actor_is_allowed(
+                repository_ref, event.actor_login
+            ):
                 raise EventParseError("repository event actor is not an allowed collaborator")
             source_batch = await github.fetch_allowed_sources(
                 repository_ref,
@@ -235,7 +237,9 @@ async def analyze_event(
                     if event.event_name == "push"
                     else None
                 ),
-                actor_login=event.actor_login,
+                actor_login=(
+                    event.actor_login if event.event_name != "workflow_dispatch" else None
+                ),
             )
 
         documents, context_document_ids = _analysis_documents(
