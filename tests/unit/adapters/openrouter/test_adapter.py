@@ -122,6 +122,96 @@ async def test_pr_analysis_discards_model_generated_nodes_and_edges() -> None:
 
 
 @pytest.mark.asyncio
+async def test_pr_finding_with_proposal_evidence_uses_fallback() -> None:
+    active_quote = "Do not store raw user messages in external analytics."
+    proposal_quote = "Store full raw user prompts for 30 days."
+    active_url = "https://github.com/owner/repo/blob/main/docs/privacy.md"
+    proposal_url = "https://github.com/owner/repo/pull/42"
+    request = AnalysisRequest(
+        job_id="job-1",
+        repository_id="repo-1",
+        pr_number=42,
+        head_sha="a" * 40,
+        knowledge_revision=1,
+        prompt_version="alignment-v1",
+        documents=(
+            AnalysisDocument(
+                source_version_id="active-version",
+                source_type="active_knowledge",
+                url=active_url,
+                content=active_quote,
+            ),
+            AnalysisDocument(
+                source_version_id="proposal-version",
+                source_type="pull_request",
+                url=proposal_url,
+                content=proposal_quote,
+            ),
+        ),
+    )
+    requested_models: list[str] = []
+
+    def finding_payload(source_version_id: str, url: str, quote: str) -> dict[str, object]:
+        return {
+            "outcome": "direct_conflict",
+            "nodes": [],
+            "findings": [
+                {
+                    "finding_type": "direct_conflict",
+                    "target_node_logical_key": "privacy-safe-debugging",
+                    "target_node_type": "decision",
+                    "target_node_status": "active",
+                    "contradicts": True,
+                    "uncertain": False,
+                    "explanation": "The proposal contradicts the active privacy decision.",
+                    "recommended_action": "Do not store raw prompts.",
+                    "evidence": [
+                        {
+                            "source_version_id": source_version_id,
+                            "url": url,
+                            "exact_quote": quote,
+                            "role": "contradicts",
+                        }
+                    ],
+                }
+            ],
+            "edges": [],
+        }
+
+    def handler(http_request: httpx.Request) -> httpx.Response:
+        model = json.loads(http_request.content)["model"]
+        requested_models.append(model)
+        if model == "primary/model":
+            return _completion(
+                finding_payload("proposal-version", proposal_url, proposal_quote),
+                model=model,
+            )
+        return _completion(
+            finding_payload("active-version", active_url, active_quote),
+            model=model,
+        )
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler),
+        base_url="https://openrouter.test/api/v1",
+    ) as client:
+        adapter = OpenRouterAdapter(
+            "secret",
+            OpenRouterConfig(
+                primary_model="primary/model",
+                fallback_model="fallback/model",
+                max_retries=0,
+            ),
+            client=client,
+        )
+        result = await adapter.analyze(request)
+
+    assert requested_models == ["primary/model", "fallback/model"]
+    assert result.requested_model == "fallback/model"
+    assert result.result.findings[0].evidence[0].source_version_id == "active-version"
+
+
+@pytest.mark.asyncio
 async def test_primary_failure_uses_fixed_fallback_and_records_usage() -> None:
     requested_models: list[str] = []
 
