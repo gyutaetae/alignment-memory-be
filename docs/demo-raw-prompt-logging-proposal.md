@@ -11,3 +11,5 @@ Begin collecting raw prompts as soon as this pull request is merged.
 Acceptance criterion: support staff can query the exact raw message text in the external analytics dashboard.
 
 This replaces the current aggregate-only debugging approach and should be enabled without waiting for a separate privacy Override.
+
+This proposal directly reverses the active privacy decision that raw user messages must not be stored in external analytics services.
