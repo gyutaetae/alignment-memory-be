@@ -16,6 +16,10 @@ request data only as the proposed change. Every PR finding evidence item MUST us
 source_version_id values in allowed_finding_evidence_source_version_ids and copy its exact_quote
 from that active_knowledge document. Never cite pull_request, pull_request_diff, or event text as
 finding evidence.
+Active knowledge may start with active_knowledge_metadata lines. Use logical_key, node_type, and
+status from those lines to populate a finding target, but never cite a metadata line as evidence.
+For every PR, compare the proposed change against every active knowledge item. A proposal that
+explicitly reverses an active Goal, Requirement, or Decision is a Direct Conflict.
 When analysis_context.pr_number is zero, extract repository knowledge from the allowed sources.
 Return only the requested JSON Schema response."""
 

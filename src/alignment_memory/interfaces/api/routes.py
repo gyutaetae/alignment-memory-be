@@ -23,6 +23,7 @@ from alignment_memory.domain import (
     Job,
     JobStatus,
     JobType,
+    KnowledgeNode,
     KnowledgeNodeVersion,
     Override,
     ValidationStatus,
@@ -546,10 +547,15 @@ async def get_internal_job_context(
         job.repository_id,
         record.knowledge_revision,
     )
+    snapshots = await repository.list_knowledge_snapshots(job.repository_id)
+    nodes_by_id = {snapshot.node.id: snapshot.node for snapshot in snapshots}
     return {
         "job": _job_payload(job),
         "repository": _repository_payload(record),
-        "knowledge": [_knowledge_version_payload(item) for item in context],
+        "knowledge": [
+            _knowledge_version_payload(item, nodes_by_id.get(item.node_id))
+            for item in context
+        ],
     }
 
 
@@ -1081,8 +1087,11 @@ def _evidence_payload(evidence: EvidenceReference) -> dict[str, object]:
     }
 
 
-def _knowledge_version_payload(version: KnowledgeNodeVersion) -> dict[str, object]:
-    return {
+def _knowledge_version_payload(
+    version: KnowledgeNodeVersion,
+    node: KnowledgeNode | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
         "id": version.id,
         "nodeId": version.node_id,
         "revision": version.revision,
@@ -1091,6 +1100,14 @@ def _knowledge_version_payload(version: KnowledgeNodeVersion) -> dict[str, objec
         "status": version.status.value,
         "evidence": [_evidence_payload(item) for item in version.evidence],
     }
+    if node is not None:
+        payload.update(
+            {
+                "logicalKey": node.logical_key,
+                "nodeType": node.node_type.value,
+            }
+        )
+    return payload
 
 
 def _handshake_payload(handshake: Handshake) -> dict[str, object]:
