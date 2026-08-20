@@ -3,13 +3,13 @@
 > Generated deterministically from validated evidence. Edit source records, not this file.
 
 - Repository: `gyutaetae/alignment-memory-be`
-- Knowledge revision: `3`
-- Source head: `d4f3ae6e0dc6bd470f22e6f919589c50e092e670`
+- Knowledge revision: `4`
+- Source head: `1c9e43c34433c346dc7a3310c1061f99b38ca0d5`
 
 ## Contents
 
 - [[project-memory#ADR-017|Narrow MVP boundary]]
-- [[project-memory#Cross-border collaboration agreement - Evidence boundary|Cross-border collaboration agreement - Evidence boundary]]
+- [[project-memory#Privacy-Decision|Privacy decision on user message storage]]
 - [[project-memory#PRD-Non-goals|Non-goals]]
 
 ## Requirements
@@ -35,18 +35,13 @@
 - Evidence:
   - [Decision: The MVP boundary is one public GitHub repository with native integration only.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/adr.md) (`51516476-870f-4f9a-92b2-699107892b8d`)
 
-### Cross-border collaboration agreement - Evidence boundary
+### Privacy-Decision
 
-- Title: Cross-border collaboration agreement - Evidence boundary
+- Title: Privacy decision on user message storage
 - Type: `decision`
 - Status: `active`
-- Summary: Actual project background: the project lead worked from Toronto while collaborating asynchronously with developers in Korea. Demo reenactment: the five-minute demo represents a Seoul PM and a Toronto developer as roles. Verifiable product evidence: GitHub commits, pull requests, Actions runs, AI findings, handshakes, and overrides created during the demo are real records produced by the deployed system. English working translation: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.
+- Summary: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.
 - Evidence:
-  - [- Status: Active
-- Owner: Project team
-- Scope: Logs, analytics, and AI-assisted debugging
-- Reason: Cross-organizational debugging needs shared evidence, but raw messages may contain personal or confidential information.
-
-> 원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다. 디버깅에는 익명화된 집계 지표와 재현 가능한 오류 코드만 사용한다.
+  - [> 원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다. 디버깅에는 익명화된 집계 지표와 재현 가능한 오류 코드만 사용한다.
 
 English working translation: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/demo-cross-border-agreement.md) (`f812a9eb-bcbd-57b5-91cf-41bcbc469ba1`)
