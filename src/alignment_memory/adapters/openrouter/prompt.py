@@ -12,7 +12,10 @@ Every evidence exact_quote must be a verbatim substring of its cited document.
 Direct Conflict requires a certain contradiction against an active Goal, Requirement, or Decision.
 If intent or evidence is insufficient, return Missing Alignment. Otherwise return Aligned.
 When analysis_context.pr_number is greater than zero, return no nodes or edges. Treat pull
-request data only as the proposed change and cite findings only from active_knowledge documents.
+request data only as the proposed change. Every PR finding evidence item MUST use one of the
+source_version_id values in allowed_finding_evidence_source_version_ids and copy its exact_quote
+from that active_knowledge document. Never cite pull_request, pull_request_diff, or event text as
+finding evidence.
 When analysis_context.pr_number is zero, extract repository knowledge from the allowed sources.
 Return only the requested JSON Schema response."""
 
@@ -25,6 +28,11 @@ def build_messages(request: AnalysisRequest) -> list[dict[str, str]]:
             "head_sha": request.head_sha,
             "knowledge_revision": request.knowledge_revision,
             "context_is_sufficient": request.context_is_sufficient,
+            "allowed_finding_evidence_source_version_ids": [
+                document.source_version_id
+                for document in request.documents
+                if document.source_type == "active_knowledge"
+            ],
         },
         "untrusted_repository_data": [
             {
