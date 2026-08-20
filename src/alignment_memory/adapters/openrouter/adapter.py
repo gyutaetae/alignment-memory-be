@@ -233,7 +233,7 @@ class OpenRouterAdapter:
         request: AnalysisRequest,
     ) -> AnalysisResult:
         """Repair only evidence IDs proven by a unique URL and exact-quote match."""
-        known_ids = {document.source_version_id for document in request.documents}
+        indexed = {document.source_version_id: document for document in request.documents}
         payload = result.model_dump(mode="json")
         changed = False
         for collection_name in ("nodes", "findings", "edges"):
@@ -250,11 +250,16 @@ class OpenRouterAdapter:
                     if not isinstance(evidence, dict):
                         continue
                     source_version_id = evidence.get("source_version_id")
-                    if source_version_id in known_ids:
-                        continue
                     url = evidence.get("url")
                     quote = evidence.get("exact_quote")
                     if not isinstance(url, str) or not isinstance(quote, str):
+                        continue
+                    current = indexed.get(source_version_id)
+                    if (
+                        current is not None
+                        and current.url == url
+                        and exact_quote_is_present(quote, current.content)
+                    ):
                         continue
                     matches = [
                         document

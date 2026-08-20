@@ -207,6 +207,49 @@ async def test_openai_repairs_unknown_evidence_id_only_from_unique_url_and_quote
 
 
 @pytest.mark.asyncio
+async def test_openai_repairs_mismatched_known_id_from_unique_url_and_quote() -> None:
+    second_url = "https://github.com/owner/repo/blob/main/docs/privacy.md"
+    second_quote = "Do not store raw user messages in external analytics."
+    request = _request()
+    request = AnalysisRequest(
+        job_id=request.job_id,
+        repository_id=request.repository_id,
+        pr_number=request.pr_number,
+        head_sha=request.head_sha,
+        knowledge_revision=request.knowledge_revision,
+        prompt_version=request.prompt_version,
+        documents=(
+            *request.documents,
+            AnalysisDocument(
+                source_version_id="source-version-2",
+                source_type="markdown",
+                url=second_url,
+                content=second_quote,
+            ),
+        ),
+    )
+    payload = _analysis_payload(quote=second_quote)
+    evidence = payload["nodes"][0]["evidence"][0]  # type: ignore[index]
+    evidence["url"] = second_url
+
+    def handler(http_request: httpx.Request) -> httpx.Response:
+        return _completion(payload, model="gpt-4.1-mini-2025-04-14", include_cost=False)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler),
+        base_url="https://api.openai.test/v1",
+    ) as client:
+        adapter = OpenAIAdapter(
+            "secret",
+            OpenAIConfig(primary_model="gpt-4.1-mini", max_retries=0),
+            client=client,
+        )
+        result = await adapter.analyze(request)
+
+    assert result.result.nodes[0].evidence[0].source_version_id == "source-version-2"
+
+
+@pytest.mark.asyncio
 async def test_malformed_json_is_not_provider_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
