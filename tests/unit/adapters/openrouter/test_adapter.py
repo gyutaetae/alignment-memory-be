@@ -229,8 +229,6 @@ async def test_openai_repairs_mismatched_known_id_from_unique_url_and_quote() ->
         ),
     )
     payload = _analysis_payload(quote=second_quote)
-    evidence = payload["nodes"][0]["evidence"][0]  # type: ignore[index]
-    evidence["url"] = second_url
 
     def handler(http_request: httpx.Request) -> httpx.Response:
         return _completion(payload, model="gpt-4.1-mini-2025-04-14", include_cost=False)
@@ -247,6 +245,7 @@ async def test_openai_repairs_mismatched_known_id_from_unique_url_and_quote() ->
         result = await adapter.analyze(request)
 
     assert result.result.nodes[0].evidence[0].source_version_id == "source-version-2"
+    assert str(result.result.nodes[0].evidence[0].url) == second_url
 
 
 @pytest.mark.asyncio
