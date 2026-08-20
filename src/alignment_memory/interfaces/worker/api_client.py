@@ -39,7 +39,7 @@ class HmacApiClient:
         secret: str,
         *,
         client: httpx.AsyncClient | None = None,
-        timeout_seconds: float = 60.0,
+        timeout_seconds: float = 180.0,
         timestamp_clock: TimestampClock | None = None,
     ) -> None:
         if not base_url.strip():

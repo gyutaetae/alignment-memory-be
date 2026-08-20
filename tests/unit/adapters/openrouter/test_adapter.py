@@ -22,7 +22,7 @@ def _request(content: str = "Recorded decision: keep the MVP web-only.") -> Anal
     return AnalysisRequest(
         job_id="job-1",
         repository_id="repo-1",
-        pr_number=42,
+        pr_number=0,
         head_sha="a" * 40,
         knowledge_revision=1,
         prompt_version="alignment-v1",
@@ -88,6 +88,37 @@ def _completion(
             "usage": usage,
         },
     )
+
+
+@pytest.mark.asyncio
+async def test_pr_analysis_discards_model_generated_nodes_and_edges() -> None:
+    request = _request()
+    request = AnalysisRequest(
+        job_id=request.job_id,
+        repository_id=request.repository_id,
+        pr_number=42,
+        head_sha=request.head_sha,
+        knowledge_revision=request.knowledge_revision,
+        prompt_version=request.prompt_version,
+        documents=request.documents,
+    )
+
+    def handler(http_request: httpx.Request) -> httpx.Response:
+        return _completion(_analysis_payload())
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler),
+        base_url="https://openrouter.test/api/v1",
+    ) as client:
+        adapter = OpenRouterAdapter(
+            "secret",
+            OpenRouterConfig(primary_model="primary/model", max_retries=0),
+            client=client,
+        )
+        result = await adapter.analyze(request)
+
+    assert result.result.nodes == []
+    assert result.result.edges == []
 
 
 @pytest.mark.asyncio

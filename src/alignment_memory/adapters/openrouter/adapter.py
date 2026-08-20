@@ -211,6 +211,8 @@ class OpenRouterAdapter:
                 f"{self.provider_label} completion does not match AnalysisResult"
             ) from error
         result = self._canonicalize_evidence_ids(result, request)
+        if request.pr_number > 0 and (result.nodes or result.edges):
+            result = result.model_copy(update={"nodes": [], "edges": []})
         validate_analysis_result_evidence(result, request.documents)
 
         actual_model = payload.get("model")
