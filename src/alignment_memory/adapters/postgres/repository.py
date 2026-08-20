@@ -195,7 +195,9 @@ class PostgresRepository:
                 stored = self._source_version_from_row(
                     self._required(row, "source version conflict disappeared")
                 )
-                if stored.id == version.id and stored != version:
+                if stored.id == version.id and not self._same_source_version_content(
+                    stored, version
+                ):
                     raise AppendOnlyViolation(
                         "source version ID already exists with different data"
                     )
@@ -214,6 +216,14 @@ class PostgresRepository:
                 (source_id,),
             )
         return tuple(self._source_version_from_row(row) for row in rows)
+
+    @staticmethod
+    def _same_source_version_content(first: SourceVersion, second: SourceVersion) -> bool:
+        return (
+            first.source_id == second.source_id
+            and first.content_hash == second.content_hash
+            and first.content == second.content
+        )
 
     async def add_knowledge_node(self, node: KnowledgeNode) -> KnowledgeNode:
         async with self._connection_scope() as connection:
