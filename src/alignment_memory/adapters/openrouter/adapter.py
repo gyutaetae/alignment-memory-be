@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from alignment_memory.adapters.openrouter.prompt import build_messages
 from alignment_memory.contracts.analysis import AnalysisResult
+from alignment_memory.domain import exact_quote_is_present
 from alignment_memory.ports.llm import (
     AnalysisRequest,
     LlmAnalysis,
@@ -185,9 +186,7 @@ class OpenRouterAdapter:
 
         choices = payload.get("choices")
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-            raise LlmValidationError(
-                f"{self.provider_label} response has no completion choice"
-            )
+            raise LlmValidationError(f"{self.provider_label} response has no completion choice")
         choice = choices[0]
         if choice.get("finish_reason") == "error" or isinstance(choice.get("error"), dict):
             raise LlmProviderError(
@@ -198,9 +197,7 @@ class OpenRouterAdapter:
             )
         message = choice.get("message")
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
-            raise LlmValidationError(
-                f"{self.provider_label} completion content is missing"
-            )
+            raise LlmValidationError(f"{self.provider_label} completion content is missing")
         try:
             raw_result = json.loads(message["content"])
         except json.JSONDecodeError as error:
@@ -213,6 +210,7 @@ class OpenRouterAdapter:
             raise LlmValidationError(
                 f"{self.provider_label} completion does not match AnalysisResult"
             ) from error
+        result = self._canonicalize_evidence_ids(result, request)
         validate_analysis_result_evidence(result, request.documents)
 
         actual_model = payload.get("model")
@@ -228,6 +226,45 @@ class OpenRouterAdapter:
             input_hash=request.input_hash,
             usage=self._parse_usage(payload.get("usage")),
         )
+
+    @staticmethod
+    def _canonicalize_evidence_ids(
+        result: AnalysisResult,
+        request: AnalysisRequest,
+    ) -> AnalysisResult:
+        """Repair only evidence IDs proven by a unique URL and exact-quote match."""
+        known_ids = {document.source_version_id for document in request.documents}
+        payload = result.model_dump(mode="json")
+        changed = False
+        for collection_name in ("nodes", "findings", "edges"):
+            collection = payload.get(collection_name)
+            if not isinstance(collection, list):
+                continue
+            for item in collection:
+                if not isinstance(item, dict):
+                    continue
+                evidence_set = item.get("evidence")
+                if not isinstance(evidence_set, list):
+                    continue
+                for evidence in evidence_set:
+                    if not isinstance(evidence, dict):
+                        continue
+                    source_version_id = evidence.get("source_version_id")
+                    if source_version_id in known_ids:
+                        continue
+                    url = evidence.get("url")
+                    quote = evidence.get("exact_quote")
+                    if not isinstance(url, str) or not isinstance(quote, str):
+                        continue
+                    matches = [
+                        document
+                        for document in request.documents
+                        if document.url == url and exact_quote_is_present(quote, document.content)
+                    ]
+                    if len(matches) == 1:
+                        evidence["source_version_id"] = matches[0].source_version_id
+                        changed = True
+        return AnalysisResult.model_validate(payload) if changed else result
 
     async def _request_model(
         self,
@@ -334,9 +371,7 @@ class OpenRouterAdapter:
         try:
             payload = response.json()
         except ValueError as error:
-            raise LlmValidationError(
-                f"{self.provider_label} response is not JSON"
-            ) from error
+            raise LlmValidationError(f"{self.provider_label} response is not JSON") from error
         if not isinstance(payload, dict):
             raise LlmValidationError(f"{self.provider_label} response is not an object")
         return payload

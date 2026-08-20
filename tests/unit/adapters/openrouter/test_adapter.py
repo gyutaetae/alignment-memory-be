@@ -185,6 +185,28 @@ async def test_openai_request_uses_structured_output_without_router_fields() -> 
 
 
 @pytest.mark.asyncio
+async def test_openai_repairs_unknown_evidence_id_only_from_unique_url_and_quote() -> None:
+    payload = _analysis_payload()
+    payload["nodes"][0]["evidence"][0]["source_version_id"] = "invented-decision-id"  # type: ignore[index]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _completion(payload, model="gpt-4.1-mini-2025-04-14", include_cost=False)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler),
+        base_url="https://api.openai.test/v1",
+    ) as client:
+        adapter = OpenAIAdapter(
+            "secret",
+            OpenAIConfig(primary_model="gpt-4.1-mini", max_retries=0),
+            client=client,
+        )
+        result = await adapter.analyze(_request())
+
+    assert result.result.nodes[0].evidence[0].source_version_id == "source-version-1"
+
+
+@pytest.mark.asyncio
 async def test_malformed_json_is_not_provider_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
