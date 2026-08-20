@@ -49,5 +49,6 @@ English working translation: Do not store raw user messages in external analytic
 - Baseline sync status: Pending until both the Analyze and Publish GitHub Actions complete successfully.
 - Evidence rule: Every AI-generated quote must match text in its stored source exactly; an unsupported paraphrase must be rejected before publication.
 - Resilience rule: If an AI response references a node that was not persisted, ignore only that unresolved edge and preserve the remaining verified knowledge instead of failing the whole synchronization.
+- Failure audit: Analyze runs `32410973909` and `32411118467` were rejected before publication; they remain visible and must not be described as successful live proof.
 - Recording rule: A pending or failed run must never be presented as a live success. Keep the run URL and the corrective pull request as part of the collaboration history.
 - Role-play rule: Label the Seoul PM and Toronto developer views as a reenactment throughout the recording.
