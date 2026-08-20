@@ -232,7 +232,7 @@ class OpenRouterAdapter:
         result: AnalysisResult,
         request: AnalysisRequest,
     ) -> AnalysisResult:
-        """Repair only evidence IDs proven by a unique URL and exact-quote match."""
+        """Canonicalize evidence only when an exact quote proves one input document."""
         indexed = {document.source_version_id: document for document in request.documents}
         payload = result.model_dump(mode="json")
         changed = False
@@ -266,8 +266,15 @@ class OpenRouterAdapter:
                         for document in request.documents
                         if document.url == url and exact_quote_is_present(quote, document.content)
                     ]
+                    if not matches:
+                        matches = [
+                            document
+                            for document in request.documents
+                            if exact_quote_is_present(quote, document.content)
+                        ]
                     if len(matches) == 1:
                         evidence["source_version_id"] = matches[0].source_version_id
+                        evidence["url"] = matches[0].url
                         changed = True
         return AnalysisResult.model_validate(payload) if changed else result
 
