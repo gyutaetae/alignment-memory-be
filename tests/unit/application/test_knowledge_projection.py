@@ -57,6 +57,12 @@ def _analysis() -> AnalysisResult:
                     "to_node_logical_key": "decision:no-raw-message-logging",
                     "relation_type": "constrains",
                     "evidence": [evidence],
+                },
+                {
+                    "from_node_logical_key": "goal:privacy-safe-collaboration",
+                    "to_node_logical_key": "decision:invented-by-model",
+                    "relation_type": "constrains",
+                    "evidence": [evidence],
                 }
             ],
         }
