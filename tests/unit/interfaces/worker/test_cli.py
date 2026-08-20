@@ -189,7 +189,7 @@ async def test_analyze_event_runs_signed_context_analysis_and_persists_validated
     artifact = await analyze_event(
         event,
         repository_id=REPOSITORY_ID,
-        supplied_job_id=None,
+        supplied_job_id="",
         prompt_version="worker-v1",
         api=api,  # type: ignore[arg-type]
         github=FakeGitHub(),  # type: ignore[arg-type]
