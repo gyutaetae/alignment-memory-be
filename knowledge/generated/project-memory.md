@@ -3,13 +3,14 @@
 > Generated deterministically from validated evidence. Edit source records, not this file.
 
 - Repository: `gyutaetae/alignment-memory-be`
-- Knowledge revision: `6`
-- Source head: `7c48e9a4db1a8ce1a62891be4cbeda55a8ab2a71`
+- Knowledge revision: `7`
+- Source head: `5cad9ed6f3b7152f3aae81164c3c6384ac77dc19`
 
 ## Contents
 
 - [[project-memory#ADR-017|Narrow MVP boundary]]
-- [[project-memory#exclude-browser-extension|Exclude browser extension and external ingestion]]
+- [[project-memory#Cross-border collaboration agreement - Evidence boundary|Privacy-Decision]]
+- [[project-memory#Exclude browser extension and external ingestion|Exclude browser extension and external ingestion]]
 - [[project-memory#Do not store raw user messages in external analytics|Do not store raw user messages in external analytics]]
 
 ## Requirements
@@ -38,7 +39,18 @@ English working translation: Do not store raw user messages in external analytic
 - Evidence:
   - [Decision: The MVP boundary is one public GitHub repository with native integration only.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/adr.md) (`51516476-870f-4f9a-92b2-699107892b8d`)
 
-### exclude-browser-extension
+### Cross-border collaboration agreement - Evidence boundary
+
+- Title: Privacy-Decision
+- Type: `decision`
+- Status: `active`
+- Summary: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.
+- Evidence:
+  - [> 원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다. 디버깅에는 익명화된 집계 지표와 재현 가능한 오류 코드만 사용한다.
+
+English working translation: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/demo-cross-border-agreement.md) (`f812a9eb-bcbd-57b5-91cf-41bcbc469ba1`)
+
+### Exclude browser extension and external ingestion
 
 - Title: Exclude browser extension and external ingestion
 - Type: `decision`
