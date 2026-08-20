@@ -46,6 +46,7 @@ from alignment_memory.interfaces.worker.result_schema import (
 from alignment_memory.ports import (
     AnalysisRequest,
     GitHubRepositoryRef,
+    GitHubSourceType,
     LlmAnalysis,
 )
 from alignment_memory.settings import Settings
@@ -478,7 +479,7 @@ def _analysis_documents(
     documents.append(
         ArtifactDocument(
             sourceVersionId=event.event_source_version_id,
-            sourceType=f"github_{event.event_name}_event",
+            sourceType=_event_source_type(event),
             url=event.source_url,
             content=event.proposed_change,
             sourceId=event.event_source_id,
@@ -501,6 +502,12 @@ def _analysis_documents(
         )
     )
     return ordered, context_ids
+
+
+def _event_source_type(event: ParsedGitHubEvent) -> str:
+    if event.event_name == "pull_request":
+        return GitHubSourceType.PULL_REQUEST.value
+    return GitHubSourceType.COMMIT.value
 
 
 def _context_documents(context: Mapping[str, Any]) -> tuple[ArtifactDocument, ...]:

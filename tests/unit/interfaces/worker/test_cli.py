@@ -4,6 +4,7 @@ import pytest
 
 from alignment_memory.contracts import AnalysisResult
 from alignment_memory.interfaces.worker.cli import (
+    _event_source_type,
     _verify_repository_identity,
     analyze_event,
     build_parser,
@@ -209,6 +210,36 @@ def test_initial_sync_can_advance_a_stale_main_but_pr_analysis_cannot() -> None:
     )
     with pytest.raises(ValueError, match="stale main SHA"):
         _verify_repository_identity(pull_request, repository)
+
+
+@pytest.mark.parametrize(
+    ("event_name", "expected_source_type"),
+    [
+        ("workflow_dispatch", GitHubSourceType.COMMIT.value),
+        ("push", GitHubSourceType.COMMIT.value),
+        ("pull_request", GitHubSourceType.PULL_REQUEST.value),
+    ],
+)
+def test_event_sources_use_database_supported_types(
+    event_name: str,
+    expected_source_type: str,
+) -> None:
+    event = ParsedGitHubEvent(
+        event_name=event_name,  # type: ignore[arg-type]
+        event_key=f"event:{event_name}",
+        repository_full_name="acme/alignment-memory",
+        github_repository_id=123,
+        default_branch="main",
+        actor_login="member",
+        actor_association=None,
+        head_sha=HEAD_SHA,
+        main_sha=MAIN_SHA,
+        proposed_change="Test event source.",
+        source_url="https://github.com/acme/alignment-memory",
+        pr_number=7 if event_name == "pull_request" else None,
+    )
+
+    assert _event_source_type(event) == expected_source_type
 
 
 @pytest.mark.asyncio
