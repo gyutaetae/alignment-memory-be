@@ -9,3 +9,5 @@ The analytics copy should preserve the complete message text. Aggregated metrics
 Begin collecting raw prompts as soon as this pull request is merged.
 
 Acceptance criterion: support staff can query the exact raw message text in the external analytics dashboard.
+
+This replaces the current aggregate-only debugging approach and should be enabled without waiting for a separate privacy Override.
