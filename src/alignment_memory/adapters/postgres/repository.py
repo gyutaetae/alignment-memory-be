@@ -973,7 +973,14 @@ class PostgresRepository:
             connection = transaction._bound_connection()
             row = await self._fetch_one(
                 connection,
-                "select * from repositories where id = %s for update",
+                """
+                select repository.*, installation.github_installation_id
+                from repositories repository
+                join github_installations installation
+                  on installation.id = repository.installation_id
+                where repository.id = %s
+                for update of repository
+                """,
                 (repository_id,),
             )
             if row is None:
@@ -990,13 +997,16 @@ class PostgresRepository:
             updated = await self._fetch_one(
                 connection,
                 """
-                update repositories
+                update repositories repository
                 set baseline_commit_sha = %s,
                     main_commit_sha = %s,
                     knowledge_revision = %s,
                     updated_at = now()
-                where id = %s and knowledge_revision = %s
-                returning *
+                from github_installations installation
+                where repository.id = %s
+                  and repository.knowledge_revision = %s
+                  and installation.id = repository.installation_id
+                returning repository.*, installation.github_installation_id
                 """,
                 (head_sha, head_sha, target_revision, repository_id, expected_revision),
             )
@@ -1015,7 +1025,14 @@ class PostgresRepository:
             connection = transaction._bound_connection()
             row = await self._fetch_one(
                 connection,
-                "select * from repositories where id = %s for update",
+                """
+                select repository.*, installation.github_installation_id
+                from repositories repository
+                join github_installations installation
+                  on installation.id = repository.installation_id
+                where repository.id = %s
+                for update of repository
+                """,
                 (repository_id,),
             )
             if row is None:
@@ -1031,12 +1048,15 @@ class PostgresRepository:
             updated = await self._fetch_one(
                 connection,
                 """
-                update repositories
+                update repositories repository
                 set baseline_commit_sha = %s,
                     main_commit_sha = %s,
                     updated_at = now()
-                where id = %s and main_commit_sha = %s
-                returning *
+                from github_installations installation
+                where repository.id = %s
+                  and repository.main_commit_sha = %s
+                  and installation.id = repository.installation_id
+                returning repository.*, installation.github_installation_id
                 """,
                 (
                     published_main_sha,
