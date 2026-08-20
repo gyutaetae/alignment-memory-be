@@ -214,6 +214,8 @@ class OpenRouterAdapter:
         if request.pr_number > 0 and (result.nodes or result.edges):
             result = result.model_copy(update={"nodes": [], "edges": []})
         validate_analysis_result_evidence(result, request.documents)
+        if request.pr_number > 0:
+            self._validate_pr_finding_scope(result, request)
 
         actual_model = payload.get("model")
         if not isinstance(actual_model, str) or not actual_model.strip():
@@ -228,6 +230,24 @@ class OpenRouterAdapter:
             input_hash=request.input_hash,
             usage=self._parse_usage(payload.get("usage")),
         )
+
+    @staticmethod
+    def _validate_pr_finding_scope(
+        result: AnalysisResult,
+        request: AnalysisRequest,
+    ) -> None:
+        active_ids = {
+            document.source_version_id
+            for document in request.documents
+            if document.source_type == "active_knowledge"
+        }
+        for finding in result.findings:
+            if any(
+                evidence.source_version_id not in active_ids for evidence in finding.evidence
+            ):
+                raise LlmValidationError(
+                    "PR finding evidence must cite persisted active knowledge"
+                )
 
     @staticmethod
     def _canonicalize_evidence_ids(
