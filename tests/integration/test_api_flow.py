@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import time
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
@@ -18,6 +19,12 @@ from alignment_memory.interfaces.api.dependencies import (
 )
 from alignment_memory.interfaces.api.main import create_app
 from alignment_memory.interfaces.api.security import TEST_USER_HEADER
+from alignment_memory.interfaces.worker.result_schema import (
+    ArtifactDocument,
+    ArtifactEvent,
+    ValidatedAnalysisArtifact,
+)
+from alignment_memory.ports import AnalysisRequest
 from alignment_memory.settings import Settings
 
 HMAC_SECRET = "integration-hmac-secret"
@@ -343,3 +350,148 @@ def test_validated_internal_result_persists_and_stale_head_is_rejected() -> None
     assert persisted.json()["outcome"] == "aligned"
     assert detail.status_code == 200
     assert detail.json()["headSha"] != FIXTURE_HEAD_SHA
+
+
+def test_repository_knowledge_and_generated_publication_advance_live_anchor() -> None:
+    event_key = f"initial-sync:1:{FIXTURE_MAIN_SHA}"
+    source_id = "20000000-0000-0000-0000-000000000010"
+    source_version_id = "20000000-0000-0000-0000-000000000011"
+    source_url = "https://github.com/fixture-owner/alignment-memory-demo/blob/main/demo.md"
+    quote = "Raw user messages must not be stored by external analytics services."
+    document = ArtifactDocument(
+        sourceVersionId=source_version_id,
+        sourceType="markdown",
+        url=source_url,
+        content=quote,
+        sourceId=source_id,
+        externalId="demo.md",
+        externalVersion=FIXTURE_MAIN_SHA,
+        contentHash=hashlib.sha256(quote.encode()).hexdigest(),
+        occurredAt=datetime(2026, 8, 20, tzinfo=UTC),
+    )
+    analysis = {
+        "outcome": "aligned",
+        "nodes": [
+            {
+                "logical_key": "decision:no-external-raw-message-storage",
+                "node_type": "decision",
+                "title": "Do not store raw messages externally",
+                "summary": "Use anonymized aggregate metrics for cross-border debugging.",
+                "status": "active",
+                "evidence": [
+                    {
+                        "source_version_id": source_version_id,
+                        "url": source_url,
+                        "exact_quote": quote,
+                        "role": "supports",
+                    }
+                ],
+            }
+        ],
+        "findings": [],
+        "edges": [],
+    }
+
+    with TestClient(_app()) as client:
+        created = _internal_post(
+            client,
+            "/api/v1/internal/jobs",
+            {
+                "repositoryId": FIXTURE_REPOSITORY_ID,
+                "eventKey": event_key,
+                "eventType": "initial_sync",
+                "headSha": FIXTURE_MAIN_SHA,
+            },
+            "knowledge-create",
+        )
+        job_id = created.json()["jobId"]
+        for expected, target in (
+            ("queued", "fetching"),
+            ("fetching", "analyzing"),
+            ("analyzing", "validating"),
+            ("validating", "persisting"),
+        ):
+            transitioned = _internal_post(
+                client,
+                f"/api/v1/internal/jobs/{job_id}/events",
+                {"expectedStatus": expected, "nextStatus": target},
+                f"knowledge-{target}",
+            )
+            assert transitioned.status_code == 200
+
+        request = AnalysisRequest(
+            job_id=job_id,
+            repository_id=FIXTURE_REPOSITORY_ID,
+            pr_number=0,
+            head_sha=FIXTURE_MAIN_SHA,
+            knowledge_revision=1,
+            prompt_version="worker-v1",
+            documents=(document.as_analysis_document(),),
+        )
+        artifact = ValidatedAnalysisArtifact.model_validate(
+            {
+                "schemaVersion": "alignment-memory/v1",
+                "validationStatus": "validated",
+                "jobId": job_id,
+                "event": ArtifactEvent(
+                    eventName="workflow_dispatch",
+                    eventKey=event_key,
+                    repositoryId=FIXTURE_REPOSITORY_ID,
+                    repositoryFullName="fixture-owner/alignment-memory-demo",
+                    githubRepositoryId=1,
+                    actorLogin="fixture-owner",
+                    headSha=FIXTURE_MAIN_SHA,
+                    mainSha=FIXTURE_MAIN_SHA,
+                    proposedChange="Initial repository synchronization requested.",
+                    sourceUrl=(
+                        "https://github.com/fixture-owner/alignment-memory-demo/tree/"
+                        f"{FIXTURE_MAIN_SHA}"
+                    ),
+                    publicationKind="generated_wiki",
+                ),
+                "knowledgeRevision": 1,
+                "contextIsSufficient": True,
+                "promptVersion": "worker-v1",
+                "provider": "openai",
+                "requestedModel": "gpt-4.1-mini",
+                "actualModel": "gpt-4.1-mini-2025-04-14",
+                "inputHash": request.input_hash,
+                "usage": {"total_tokens": 100},
+                "documents": [document],
+                "analysis": analysis,
+                "createdAt": datetime(2026, 8, 20, tzinfo=UTC),
+            }
+        )
+        persisted = _internal_post(
+            client,
+            f"/api/v1/internal/jobs/{job_id}/knowledge-result",
+            artifact.model_dump(mode="json", by_alias=True),
+            "knowledge-result",
+        )
+        published_sha = "c" * 40
+        publication_payload = {
+            "repositoryId": FIXTURE_REPOSITORY_ID,
+            "publicationKind": "generated_wiki",
+            "expectedMainSha": FIXTURE_MAIN_SHA,
+            "publishedMainSha": published_sha,
+        }
+        published = _internal_post(
+            client,
+            f"/api/v1/internal/jobs/{job_id}/publication",
+            publication_payload,
+            "knowledge-publication",
+        )
+        replay = _internal_post(
+            client,
+            f"/api/v1/internal/jobs/{job_id}/publication",
+            publication_payload,
+            "knowledge-publication",
+        )
+
+    assert persisted.status_code == 200
+    assert persisted.json()["knowledgeRevision"] == 2
+    assert published.status_code == replay.status_code == 200
+    assert published.json() == replay.json()
+    assert published.json()["job"]["status"] == "completed"
+    assert published.json()["repository"]["baselineCommitSha"] == published_sha
+    assert published.json()["repository"]["mainCommitSha"] == published_sha

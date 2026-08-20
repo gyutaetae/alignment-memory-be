@@ -458,6 +458,32 @@ class InMemoryRepository:
             self._repository_records[repository_id] = updated
             return updated
 
+    async def acknowledge_repository_publication(
+        self,
+        repository_id: str,
+        *,
+        expected_main_sha: str,
+        published_main_sha: str,
+    ) -> RepositoryRecord:
+        async with self._lock:
+            current = self._repository_records.get(repository_id)
+            if current is None:
+                raise KeyError(repository_id)
+            if (
+                current.main_commit_sha == published_main_sha
+                and current.baseline_commit_sha == published_main_sha
+            ):
+                return current
+            if current.main_commit_sha != expected_main_sha:
+                raise StaleRepositoryStateError("repository publication base is stale")
+            updated = replace(
+                current,
+                baseline_commit_sha=published_main_sha,
+                main_commit_sha=published_main_sha,
+            )
+            self._repository_records[repository_id] = updated
+            return updated
+
     async def persist_generated_artifact(
         self,
         artifact: GeneratedArtifactRecord,

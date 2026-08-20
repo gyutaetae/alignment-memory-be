@@ -933,6 +933,110 @@ class PostgresRepository:
                 )
         return tuple(snapshots)
 
+    async def list_knowledge_node_versions(
+        self,
+        node_id: str,
+    ) -> tuple[KnowledgeNodeVersion, ...]:
+        async with self._connection_scope() as connection:
+            rows = await self._fetch_all(
+                connection,
+                """
+                select * from knowledge_node_versions
+                where node_id = %s
+                order by revision, id
+                """,
+                (node_id,),
+            )
+            return tuple([await self._knowledge_version_from_row(connection, row) for row in rows])
+
+    async def advance_repository_revision(
+        self,
+        repository_id: str,
+        *,
+        expected_revision: int,
+        head_sha: str,
+    ) -> RepositoryRecord:
+        target_revision = expected_revision + 1
+        async with self.transaction() as transaction:
+            connection = transaction._bound_connection()
+            row = await self._fetch_one(
+                connection,
+                "select * from repositories where id = %s for update",
+                (repository_id,),
+            )
+            if row is None:
+                raise KeyError(repository_id)
+            current = self._repository_record_from_row(row)
+            if (
+                current.knowledge_revision == target_revision
+                and current.baseline_commit_sha == head_sha
+                and current.main_commit_sha == head_sha
+            ):
+                return current
+            if current.knowledge_revision != expected_revision:
+                raise StaleRepositoryStateError("repository knowledge revision is stale")
+            updated = await self._fetch_one(
+                connection,
+                """
+                update repositories
+                set baseline_commit_sha = %s,
+                    main_commit_sha = %s,
+                    knowledge_revision = %s,
+                    updated_at = now()
+                where id = %s and knowledge_revision = %s
+                returning *
+                """,
+                (head_sha, head_sha, target_revision, repository_id, expected_revision),
+            )
+            if updated is None:
+                raise StaleRepositoryStateError("repository knowledge revision is stale")
+            return self._repository_record_from_row(updated)
+
+    async def acknowledge_repository_publication(
+        self,
+        repository_id: str,
+        *,
+        expected_main_sha: str,
+        published_main_sha: str,
+    ) -> RepositoryRecord:
+        async with self.transaction() as transaction:
+            connection = transaction._bound_connection()
+            row = await self._fetch_one(
+                connection,
+                "select * from repositories where id = %s for update",
+                (repository_id,),
+            )
+            if row is None:
+                raise KeyError(repository_id)
+            current = self._repository_record_from_row(row)
+            if (
+                current.main_commit_sha == published_main_sha
+                and current.baseline_commit_sha == published_main_sha
+            ):
+                return current
+            if current.main_commit_sha != expected_main_sha:
+                raise StaleRepositoryStateError("repository publication base is stale")
+            updated = await self._fetch_one(
+                connection,
+                """
+                update repositories
+                set baseline_commit_sha = %s,
+                    main_commit_sha = %s,
+                    updated_at = now()
+                where id = %s and main_commit_sha = %s
+                returning *
+                """,
+                (
+                    published_main_sha,
+                    published_main_sha,
+                    repository_id,
+                    expected_main_sha,
+                ),
+            )
+            if updated is None:
+                raise StaleRepositoryStateError("repository publication base is stale")
+            return self._repository_record_from_row(updated)
+
     async def list_knowledge_edges(
         self,
         repository_id: str,

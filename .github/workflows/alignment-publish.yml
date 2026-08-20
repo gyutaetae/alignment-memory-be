@@ -171,3 +171,12 @@ jobs:
           revision="$(jq -er '.inputHash' artifacts/publish.json | cut -c1-12)"
           git commit -m "chore(alignment-memory): publish generated knowledge $revision"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"
+
+      - name: Complete published job
+        env:
+          ALIGNMENT_API_BASE_URL: ${{ vars.ALIGNMENT_API_BASE_URL }}
+          INTERNAL_HMAC_SECRET: ${{ secrets.INTERNAL_HMAC_SECRET }}
+        run: >-
+          uv run python -m alignment_memory.interfaces.worker.cli
+          complete-publication --artifact artifacts/analysis.json
+          --published-main-sha "$(git rev-parse HEAD)"
