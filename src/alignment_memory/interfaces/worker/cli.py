@@ -264,7 +264,7 @@ async def analyze_event(
     github: GitHubAppAdapter,
     llm: OpenAIAdapter | OpenRouterAdapter,
 ) -> ValidatedAnalysisArtifact:
-    job_id: str | None = supplied_job_id
+    job_id = supplied_job_id.strip() if supplied_job_id and supplied_job_id.strip() else None
     current_status: str | None = None
     try:
         if job_id is None:
