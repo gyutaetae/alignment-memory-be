@@ -492,8 +492,16 @@ def _analysis_documents(
     unique: dict[str, ArtifactDocument] = {}
     for document in documents:
         existing = unique.get(document.source_version_id)
-        if existing is not None and existing != document:
-            raise ValueError("source version ID collision in worker inputs")
+        if existing is not None:
+            if existing.content != document.content or existing.url != document.url:
+                raise ValueError("source version ID collision in worker inputs")
+            if existing.source_type == "active_knowledge":
+                continue
+            if document.source_type == "active_knowledge":
+                unique[document.source_version_id] = document
+                continue
+            if existing != document:
+                raise ValueError("source version ID collision in worker inputs")
         unique[document.source_version_id] = document
     ordered = tuple(
         sorted(
