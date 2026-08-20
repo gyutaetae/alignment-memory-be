@@ -100,7 +100,7 @@ class ProjectKnowledgeService:
             from_node = node_by_key.get(item.from_node_logical_key)
             to_node = node_by_key.get(item.to_node_logical_key)
             if from_node is None or to_node is None:
-                raise ValueError("knowledge edge references an unknown node")
+                continue
             edge_id = self._stable_id(
                 "knowledge-edge",
                 command.repository_id,

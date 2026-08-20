@@ -3,20 +3,20 @@
 > Generated deterministically from validated evidence. Edit source records, not this file.
 
 - Repository: `gyutaetae/alignment-memory-be`
-- Knowledge revision: `4`
-- Source head: `1c9e43c34433c346dc7a3310c1061f99b38ca0d5`
+- Knowledge revision: `5`
+- Source head: `c7607fb83cc1433debe99bc03f3f36768144107e`
 
 ## Contents
 
-- [[project-memory#ADR-017|Narrow MVP boundary]]
-- [[project-memory#Privacy-Decision|Privacy decision on user message storage]]
-- [[project-memory#PRD-Non-goals|Non-goals]]
+- [[project-memory#decision:mvp-boundary|MVP Boundary Decision]]
+- [[project-memory#decision:privacy-safe-debugging|Privacy-Safe Debugging Decision]]
+- [[project-memory#requirement:non-goals|Non-goals for MVP]]
 
 ## Requirements
 
-### PRD-Non-goals
+### requirement:non-goals
 
-- Title: Non-goals
+- Title: Non-goals for MVP
 - Type: `requirement`
 - Status: `active`
 - Summary: Browser extension; Slack, Notion, Figma, or Agora ingestion are Non-goals.
@@ -26,18 +26,18 @@
 
 ## Decisions
 
-### ADR-017
+### decision:mvp-boundary
 
-- Title: Narrow MVP boundary
+- Title: MVP Boundary Decision
 - Type: `decision`
 - Status: `active`
-- Summary: Decision: one public repository, desktop web, invited collaborators, and three results: Aligned, Missing Alignment, Direct Conflict. Excluded: browser extension; Slack/Notion/Figma/Agora ingestion; private/multi-repo; external forks; Stale Reference; whole-code ingestion. Intent: a complete, deployed, evidence-rich vertical slice is the winning portfolio artifact.
+- Summary: The MVP boundary is one public GitHub repository with native integration only.
 - Evidence:
   - [Decision: The MVP boundary is one public GitHub repository with native integration only.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/adr.md) (`51516476-870f-4f9a-92b2-699107892b8d`)
 
-### Privacy-Decision
+### decision:privacy-safe-debugging
 
-- Title: Privacy decision on user message storage
+- Title: Privacy-Safe Debugging Decision
 - Type: `decision`
 - Status: `active`
 - Summary: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.
