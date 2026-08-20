@@ -141,7 +141,7 @@ async def test_initial_sync_paginates_and_fetches_only_allowed_content() -> None
                     "type": "file",
                     "encoding": "base64",
                     "sha": "c" * 40,
-                    "html_url": "https://github.com/owner/repo/blob/main/README.md",
+                    "html_url": f"https://github.com/owner/repo/blob/{HEAD}/README.md",
                     "content": base64.b64encode(b"# Read me\r\nAllowed markdown").decode(),
                 },
             )
@@ -212,6 +212,7 @@ async def test_initial_sync_paginates_and_fetches_only_allowed_content() -> None
     ]
     markdown = next(source for source in batch.sources if source.source_type == "markdown")
     assert markdown.content == "# Read me\nAllowed markdown"
+    assert markdown.url == "https://github.com/owner/repo/blob/main/README.md"
     assert len(markdown.content_hash) == 64
     assert markdown.source_id != markdown.source_version_id
     assert isinstance(FixtureGitHubAdapter(sync_batches={None: batch}), GitHubPort)

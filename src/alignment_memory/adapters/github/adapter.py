@@ -357,9 +357,9 @@ class GitHubAppAdapter:
             source_type=GitHubSourceType.MARKDOWN,
             external_id=path,
             external_version=external_version,
-            url=str(
-                payload.get("html_url")
-                or f"https://github.com/{repository.full_name}/blob/{ref}/{path}"
+            url=(
+                f"https://github.com/{repository.full_name}/blob/"
+                f"{quote(repository.default_branch, safe='')}/{encoded_path}"
             ),
             content=content,
             occurred_at=occurred_at,
