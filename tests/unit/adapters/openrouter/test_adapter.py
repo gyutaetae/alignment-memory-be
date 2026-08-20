@@ -269,6 +269,7 @@ async def test_schema_request_and_prompt_keep_repository_text_in_user_data() -> 
     assert injection not in messages[0]["content"]
     user_data = json.loads(messages[1]["content"])
     assert injection in user_data["untrusted_repository_data"][0]["quoted_content"]
+    assert user_data["analysis_context"]["allowed_finding_evidence_source_version_ids"] == []
     assert captured["response_format"]["type"] == "json_schema"
     assert captured["response_format"]["json_schema"]["strict"] is True
     assert captured["provider"] == {"require_parameters": True}
