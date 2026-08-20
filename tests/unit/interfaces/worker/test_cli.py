@@ -281,7 +281,7 @@ def test_analysis_documents_prefer_matching_active_knowledge_version() -> None:
         external_id="docs/adr.md",
         external_version=MAIN_SHA,
         url=SOURCE_URL,
-        content=quote,
+        content=f"Decision record\n\n{quote}\n\nImplementation notes.",
         content_hash="c" * 64,
         occurred_at=datetime(2026, 8, 4, tzinfo=UTC),
     )

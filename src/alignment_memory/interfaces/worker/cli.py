@@ -21,6 +21,7 @@ from alignment_memory.adapters.github import (
 )
 from alignment_memory.adapters.openai import OpenAIAdapter, OpenAIConfig
 from alignment_memory.adapters.openrouter import OpenRouterAdapter, OpenRouterConfig
+from alignment_memory.domain import exact_quote_is_present
 from alignment_memory.interfaces.worker.api_client import HmacApiClient, WorkerApiError
 from alignment_memory.interfaces.worker.event_parser import (
     EventParseError,
@@ -493,12 +494,9 @@ def _analysis_documents(
     for document in documents:
         existing = unique.get(document.source_version_id)
         if existing is not None:
-            if existing.content != document.content or existing.url != document.url:
-                raise ValueError("source version ID collision in worker inputs")
-            if existing.source_type == "active_knowledge":
-                continue
-            if document.source_type == "active_knowledge":
-                unique[document.source_version_id] = document
+            active = _matching_active_document(existing, document)
+            if active is not None:
+                unique[document.source_version_id] = active
                 continue
             if existing != document:
                 raise ValueError("source version ID collision in worker inputs")
@@ -510,6 +508,24 @@ def _analysis_documents(
         )
     )
     return ordered, context_ids
+
+
+def _matching_active_document(
+    first: ArtifactDocument,
+    second: ArtifactDocument,
+) -> ArtifactDocument | None:
+    if first.source_type == "active_knowledge":
+        active, collected = first, second
+    elif second.source_type == "active_knowledge":
+        active, collected = second, first
+    else:
+        return None
+    if active.url != collected.url:
+        return None
+    quotes = [quote for quote in active.content.split("\n\n") if quote.strip()]
+    if quotes and all(exact_quote_is_present(quote, collected.content) for quote in quotes):
+        return active
+    return None
 
 
 def _event_source_type(event: ParsedGitHubEvent) -> str:
