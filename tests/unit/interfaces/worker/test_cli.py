@@ -3,7 +3,11 @@ from datetime import UTC, datetime
 import pytest
 
 from alignment_memory.contracts import AnalysisResult
-from alignment_memory.interfaces.worker.cli import analyze_event, build_parser
+from alignment_memory.interfaces.worker.cli import (
+    _verify_repository_identity,
+    analyze_event,
+    build_parser,
+)
 from alignment_memory.interfaces.worker.event_parser import ParsedGitHubEvent
 from alignment_memory.ports import (
     CollectedSource,
@@ -166,6 +170,45 @@ def test_worker_reads_openai_configuration_from_environment(monkeypatch) -> None
     assert args.llm_provider == "openai"
     assert args.openai_api_key == "test-openai-key"
     assert args.openai_primary_model == "gpt-4.1-mini"
+
+
+def test_initial_sync_can_advance_a_stale_main_but_pr_analysis_cannot() -> None:
+    repository = {
+        "fullName": "acme/alignment-memory",
+        "githubRepositoryId": 123,
+        "mainCommitSha": "c" * 40,
+    }
+    initial_sync = ParsedGitHubEvent(
+        event_name="workflow_dispatch",
+        event_key=f"initial-sync:123:{MAIN_SHA}",
+        repository_full_name="acme/alignment-memory",
+        github_repository_id=123,
+        default_branch="main",
+        actor_login="member",
+        actor_association=None,
+        head_sha=MAIN_SHA,
+        main_sha=MAIN_SHA,
+        proposed_change="Initial repository synchronization requested.",
+        source_url=f"https://github.com/acme/alignment-memory/tree/{MAIN_SHA}",
+    )
+    _verify_repository_identity(initial_sync, repository)
+
+    pull_request = ParsedGitHubEvent(
+        event_name="pull_request",
+        event_key=f"pr:123:7:{HEAD_SHA}",
+        repository_full_name="acme/alignment-memory",
+        github_repository_id=123,
+        default_branch="main",
+        actor_login="member",
+        actor_association=None,
+        head_sha=HEAD_SHA,
+        main_sha=MAIN_SHA,
+        proposed_change="Add browser extension synchronization.",
+        source_url="https://github.com/acme/alignment-memory/pull/7",
+        pr_number=7,
+    )
+    with pytest.raises(ValueError, match="stale main SHA"):
+        _verify_repository_identity(pull_request, repository)
 
 
 @pytest.mark.asyncio

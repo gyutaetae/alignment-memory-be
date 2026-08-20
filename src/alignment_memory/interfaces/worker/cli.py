@@ -665,7 +665,7 @@ def _verify_repository_identity(
         raise ValueError("GitHub numeric repository identity does not match API job context")
     current_main = _object_optional_text(repository, "mainCommitSha")
     if (
-        event.event_name in {"pull_request", "workflow_dispatch"}
+        event.event_name == "pull_request"
         and current_main is not None
         and current_main != event.main_sha
     ):
