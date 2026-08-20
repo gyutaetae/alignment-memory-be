@@ -689,8 +689,7 @@ async def persist_internal_result(
             analysis_id=alignment_id,
             finding_type=finding.finding_type,
             target_node_id=(
-                _stable_id(
-                    "knowledge-node",
+                _projected_knowledge_node_id(
                     body.repository_id,
                     finding.target_node_logical_key,
                 )
@@ -1151,6 +1150,10 @@ def _passport_payload(passport: ContextPassport) -> dict[str, object]:
 
 def _stable_id(kind: str, *parts: str) -> str:
     return str(uuid5(NAMESPACE_URL, ":".join(("alignment-memory", kind, *parts))))
+
+
+def _projected_knowledge_node_id(repository_id: str, logical_key: str) -> str:
+    return str(uuid5(NAMESPACE_URL, ":".join(("knowledge-node", repository_id, logical_key))))
 
 
 def _not_found(resource: str) -> ApiError:
