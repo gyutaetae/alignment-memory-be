@@ -7,3 +7,5 @@ Store full raw user prompts in a third-party analytics service for 30 days so th
 The analytics copy should preserve the complete message text. Aggregated metrics and reproducible error codes alone are not sufficient for this proposal.
 
 Begin collecting raw prompts as soon as this pull request is merged.
+
+Acceptance criterion: support staff can query the exact raw message text in the external analytics dashboard.
