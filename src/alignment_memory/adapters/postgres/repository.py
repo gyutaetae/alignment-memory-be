@@ -77,7 +77,9 @@ class PostgresRepository:
             min_size=min_size,
             max_size=max_size,
             timeout=timeout,
-            kwargs={"row_factory": dict_row},
+            # Supabase's transaction pooler can reuse server connections across
+            # clients, so named prepared statements are not safe here.
+            kwargs={"row_factory": dict_row, "prepare_threshold": None},
             open=False,
         )
         await pool.open(wait=True, timeout=timeout)
