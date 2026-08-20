@@ -42,3 +42,10 @@ English working translation: Do not store raw user messages in external analytic
 - The finding must cite an exact quote and GitHub source URL.
 - A Korean PM role and an English Toronto developer role must be able to inspect the same issue without sharing a time zone or language.
 - A human Handshake must be visible in the collaboration history before the demo ends.
+
+## Live verification record
+
+- Verification date: 2026-08-20 (America/Toronto)
+- Baseline sync status: Pending until both the Analyze and Publish GitHub Actions complete successfully.
+- Recording rule: A pending or failed run must never be presented as a live success. Keep the run URL and the corrective pull request as part of the collaboration history.
+- Role-play rule: Label the Seoul PM and Toronto developer views as a reenactment throughout the recording.
