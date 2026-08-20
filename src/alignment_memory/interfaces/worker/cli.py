@@ -522,7 +522,11 @@ def _matching_active_document(
         return None
     if active.url != collected.url:
         return None
-    quotes = [quote for quote in active.content.split("\n\n") if quote.strip()]
+    quotes = [
+        quote
+        for quote in active.content.split("\n\n")
+        if quote.strip() and not quote.startswith("[active_knowledge_metadata")
+    ]
     if quotes and all(exact_quote_is_present(quote, collected.content) for quote in quotes):
         return active
     return None
@@ -539,6 +543,7 @@ def _context_documents(context: Mapping[str, Any]) -> tuple[ArtifactDocument, ..
     if not isinstance(knowledge, list):
         raise ValueError("API job context knowledge must be a list")
     grouped: dict[tuple[str, str], set[str]] = {}
+    metadata: dict[tuple[str, str], set[tuple[str, str, str]]] = {}
     for version in knowledge:
         if not isinstance(version, Mapping):
             raise ValueError("API knowledge context entry must be an object")
@@ -551,13 +556,31 @@ def _context_documents(context: Mapping[str, Any]) -> tuple[ArtifactDocument, ..
             source_version_id = _object_text(evidence, "sourceVersionId")
             url = _object_text(evidence, "url")
             quote = _object_text(evidence, "exactQuote")
-            grouped.setdefault((source_version_id, url), set()).add(quote)
+            key = (source_version_id, url)
+            grouped.setdefault(key, set()).add(quote)
+            logical_key = version.get("logicalKey")
+            node_type = version.get("nodeType")
+            status = version.get("status")
+            node_metadata = (logical_key, node_type, status)
+            if all(isinstance(item, str) and item.strip() for item in node_metadata):
+                metadata.setdefault(key, set()).add((logical_key, node_type, status))
     return tuple(
         ArtifactDocument(
             sourceVersionId=source_version_id,
             sourceType="active_knowledge",
             url=url,
-            content="\n\n".join(sorted(quotes)),
+            content="\n\n".join(
+                [
+                    "\n".join(
+                        f"[active_knowledge_metadata logical_key={logical_key} "
+                        f"node_type={node_type} status={status}]"
+                        for logical_key, node_type, status in sorted(
+                            metadata.get((source_version_id, url), set())
+                        )
+                    ),
+                    *sorted(quotes),
+                ]
+            ).lstrip(),
         )
         for (source_version_id, url), quotes in sorted(grouped.items())
     )

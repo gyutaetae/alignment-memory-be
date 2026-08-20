@@ -53,6 +53,9 @@ class FakeApi:
             },
             "knowledge": [
                 {
+                    "logicalKey": "decision:exclude-browser-extension",
+                    "nodeType": "decision",
+                    "status": "active",
                     "evidence": [
                         {
                             "sourceVersionId": "source-version-1",
@@ -262,6 +265,9 @@ def test_analysis_documents_prefer_matching_active_knowledge_version() -> None:
     context = {
         "knowledge": [
             {
+                "logicalKey": "decision:web-only",
+                "nodeType": "decision",
+                "status": "active",
                 "evidence": [
                     {
                         "sourceVersionId": "shared-version",
@@ -290,6 +296,11 @@ def test_analysis_documents_prefer_matching_active_knowledge_version() -> None:
 
     shared = next(item for item in documents if item.source_version_id == "shared-version")
     assert shared.source_type == "active_knowledge"
+    assert shared.content.startswith(
+        "[active_knowledge_metadata logical_key=decision:web-only "
+        "node_type=decision status=active]"
+    )
+    assert quote in shared.content
     assert context_ids == frozenset({"shared-version"})
 
 
