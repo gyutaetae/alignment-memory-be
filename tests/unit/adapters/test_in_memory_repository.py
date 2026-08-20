@@ -131,6 +131,17 @@ async def test_source_identity_is_immutable_and_versions_are_idempotent(
     assert await repository.add_source(retry_source) is source
     assert await repository.append_source_version(version) is version
 
+    same_content_new_commit = SourceVersion(
+        id=version.id,
+        source_id=version.source_id,
+        external_version="def456",
+        content=version.content,
+        content_hash=version.content_hash,
+        occurred_at=NOW + timedelta(minutes=1),
+        ingested_at=NOW + timedelta(minutes=1),
+    )
+    assert await repository.append_source_version(same_content_new_commit) is version
+
     retried = _source_version(version_id="source-version-retry")
     assert await repository.append_source_version(retried) is version
     assert await repository.list_source_versions(source.id) == (version,)

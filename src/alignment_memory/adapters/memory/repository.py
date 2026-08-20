@@ -102,7 +102,7 @@ class InMemoryRepository:
                 raise AppendOnlyViolation("source version requires an existing source")
             existing_by_id = self._source_version_ids.get(version.id)
             if existing_by_id is not None:
-                if existing_by_id == version:
+                if self._same_source_version_content(existing_by_id, version):
                     return existing_by_id
                 raise AppendOnlyViolation("source version ID already exists with different data")
 
@@ -121,6 +121,14 @@ class InMemoryRepository:
 
     async def list_source_versions(self, source_id: str) -> tuple[SourceVersion, ...]:
         return self._source_versions[source_id]
+
+    @staticmethod
+    def _same_source_version_content(first: SourceVersion, second: SourceVersion) -> bool:
+        return (
+            first.source_id == second.source_id
+            and first.content_hash == second.content_hash
+            and first.content == second.content
+        )
 
     async def add_knowledge_node(self, node: KnowledgeNode) -> KnowledgeNode:
         natural_key = (node.repository_id, node.logical_key)
