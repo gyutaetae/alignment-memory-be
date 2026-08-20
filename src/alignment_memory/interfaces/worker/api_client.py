@@ -111,6 +111,40 @@ class HmacApiClient:
             idempotency_key=f"job-result:{job_id}",
         )
 
+    async def persist_knowledge(
+        self,
+        job_id: str,
+        payload: Mapping[str, object],
+    ) -> JsonObject:
+        return await self._request(
+            "POST",
+            f"/api/v1/internal/jobs/{job_id}/knowledge-result",
+            payload=dict(payload),
+            idempotency_key=f"job-knowledge-result:{job_id}",
+        )
+
+    async def acknowledge_publication(
+        self,
+        job_id: str,
+        *,
+        repository_id: str,
+        publication_kind: str,
+        expected_main_sha: str,
+        published_main_sha: str,
+    ) -> JsonObject:
+        payload: JsonObject = {
+            "repositoryId": repository_id,
+            "publicationKind": publication_kind,
+            "expectedMainSha": expected_main_sha,
+            "publishedMainSha": published_main_sha,
+        }
+        return await self._request(
+            "POST",
+            f"/api/v1/internal/jobs/{job_id}/publication",
+            payload=payload,
+            idempotency_key=f"job-publication:{job_id}:{published_main_sha}",
+        )
+
     async def _request(
         self,
         method: str,

@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
+from uuid import NAMESPACE_URL, uuid5
 
 from alignment_memory.ports import ActorAssociation
 
@@ -49,7 +50,12 @@ class ParsedGitHubEvent:
     @property
     def event_source_version_id(self) -> str:
         digest = hashlib.sha256(self.proposed_change.encode()).hexdigest()
-        return f"github-event:{self.event_key}:{digest}"
+        identity = f"alignment-memory:event-version:{self.event_key}:{digest}"
+        return str(uuid5(NAMESPACE_URL, identity))
+
+    @property
+    def event_source_id(self) -> str:
+        return str(uuid5(NAMESPACE_URL, f"alignment-memory:event:{self.event_key}"))
 
 
 def load_github_event(path: Path) -> dict[str, Any]:

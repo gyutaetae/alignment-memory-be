@@ -14,6 +14,7 @@ from alignment_memory.domain import (
     Source,
     SourceVersion,
 )
+from alignment_memory.ports.control_plane import KnowledgeNodeSnapshot, RepositoryRecord
 
 
 @runtime_checkable
@@ -51,6 +52,42 @@ class KnowledgeRepository(Protocol):
     ) -> Alignment: ...
 
     async def get_result_for_job(self, job_id: str) -> Alignment | None: ...
+
+    async def list_knowledge_snapshots(
+        self,
+        repository_id: str,
+    ) -> tuple[KnowledgeNodeSnapshot, ...]: ...
+
+    async def list_knowledge_node_versions(
+        self,
+        node_id: str,
+    ) -> tuple[KnowledgeNodeVersion, ...]: ...
+
+    async def list_knowledge_edges(
+        self,
+        repository_id: str,
+    ) -> tuple[KnowledgeEdge, ...]: ...
+
+    async def get_source_version_with_source(
+        self,
+        source_version_id: str,
+    ) -> tuple[Source, SourceVersion] | None: ...
+
+    async def advance_repository_revision(
+        self,
+        repository_id: str,
+        *,
+        expected_revision: int,
+        head_sha: str,
+    ) -> RepositoryRecord: ...
+
+    async def acknowledge_repository_publication(
+        self,
+        repository_id: str,
+        *,
+        expected_main_sha: str,
+        published_main_sha: str,
+    ) -> RepositoryRecord: ...
 
 
 @runtime_checkable

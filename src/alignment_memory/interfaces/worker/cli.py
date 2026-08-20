@@ -82,9 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument(
         "--openai-timeout-seconds", type=float, default=settings.openai_timeout_seconds
     )
-    analyze.add_argument(
-        "--openai-max-retries", type=int, default=settings.openai_max_retries
-    )
+    analyze.add_argument("--openai-max-retries", type=int, default=settings.openai_max_retries)
     analyze.add_argument("--openrouter-api-key", default=settings.openrouter_api_key)
     analyze.add_argument(
         "--openrouter-primary-model",
@@ -119,6 +117,15 @@ def build_parser() -> argparse.ArgumentParser:
     publish.add_argument("--output", type=Path, required=True)
     publish.add_argument("--repository-root", type=Path, default=Path.cwd())
 
+    complete = commands.add_parser(
+        "complete-publication",
+        help="mark a validated artifact job complete after its GitHub publication succeeds",
+    )
+    complete.add_argument("--artifact", type=Path, required=True)
+    complete.add_argument("--api-base-url", default=os.getenv("ALIGNMENT_API_BASE_URL"))
+    complete.add_argument("--api-hmac-secret", default=os.getenv("INTERNAL_HMAC_SECRET"))
+    complete.add_argument("--published-main-sha")
+
     demo = commands.add_parser(
         "demo",
         help="run the credential-free fixture vertical slice and evaluation",
@@ -134,6 +141,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             asyncio.run(_run_analyze_command(args))
         elif args.command == "publish":
             _run_publish_command(args)
+        elif args.command == "complete-publication":
+            asyncio.run(_run_complete_publication_command(args))
         else:
             from alignment_memory.interfaces.worker.demo import run_demo
 
@@ -207,6 +216,41 @@ async def _run_analyze_command(args: argparse.Namespace) -> None:
     finally:
         await github.close()
         await llm.close()
+        await api.close()
+
+
+async def _run_complete_publication_command(args: argparse.Namespace) -> None:
+    artifact = ValidatedAnalysisArtifact.model_validate_json(args.artifact.read_text())
+    api = HmacApiClient(
+        _required(args.api_base_url, "Alignment API base URL"),
+        _required(args.api_hmac_secret, "internal API HMAC secret"),
+    )
+    try:
+        context = await api.get_job_context(artifact.job_id)
+        job = _object(context, "job")
+        current = _object_text(job, "status")
+        if current == "persisting":
+            current = await _advance(
+                api,
+                artifact.job_id,
+                current,
+                expected="persisting",
+                target="writing_github",
+            )
+        if current == "writing_github":
+            await api.acknowledge_publication(
+                artifact.job_id,
+                repository_id=artifact.event.repository_id,
+                publication_kind=artifact.event.publication_kind,
+                expected_main_sha=artifact.event.main_sha,
+                published_main_sha=args.published_main_sha or artifact.event.main_sha,
+            )
+        elif current != "completed":
+            raise WorkerApiError(
+                "job_state_conflict",
+                f"publication cannot complete a job in status {current}",
+            )
+    finally:
         await api.close()
 
 
@@ -340,6 +384,11 @@ async def analyze_event(
         )
         if event.pr_number is not None:
             await api.persist_result(job_id, _worker_result_payload(artifact))
+        else:
+            await api.persist_knowledge(
+                job_id,
+                artifact.model_dump(mode="json", by_alias=True),
+            )
         return artifact
     except Exception as error:
         if job_id is not None and current_status not in {None, "completed", "failed"}:
@@ -419,6 +468,11 @@ def _analysis_documents(
                 sourceType=source_type_value,
                 url=url,
                 content=content,
+                sourceId=source.source_id,
+                externalId=source.external_id,
+                externalVersion=source.external_version,
+                contentHash=source.content_hash,
+                occurredAt=source.occurred_at,
             )
         )
     documents.append(
@@ -427,6 +481,11 @@ def _analysis_documents(
             sourceType=f"github_{event.event_name}_event",
             url=event.source_url,
             content=event.proposed_change,
+            sourceId=event.event_source_id,
+            externalId=event.event_key,
+            externalVersion=event.head_sha,
+            contentHash=hashlib.sha256(event.proposed_change.encode()).hexdigest(),
+            occurredAt=datetime.now(UTC),
         )
     )
     unique: dict[str, ArtifactDocument] = {}

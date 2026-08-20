@@ -54,6 +54,28 @@ class ArtifactDocument(ArtifactModel):
     source_type: NonEmptyText = Field(alias="sourceType")
     url: HttpUrl
     content: NonEmptyText
+    source_id: NonEmptyText | None = Field(default=None, alias="sourceId")
+    external_id: NonEmptyText | None = Field(default=None, alias="externalId")
+    external_version: NonEmptyText | None = Field(default=None, alias="externalVersion")
+    content_hash: InputHash | None = Field(default=None, alias="contentHash")
+    occurred_at: datetime | None = Field(default=None, alias="occurredAt")
+
+    @model_validator(mode="after")
+    def validate_persistence_metadata(self) -> Self:
+        metadata = (
+            self.source_id,
+            self.external_id,
+            self.external_version,
+            self.content_hash,
+            self.occurred_at,
+        )
+        if any(item is not None for item in metadata) and not all(
+            item is not None for item in metadata
+        ):
+            raise ValueError("artifact document persistence metadata must be complete")
+        if self.occurred_at is not None and self.occurred_at.tzinfo is None:
+            raise ValueError("artifact document occurrence time must include a timezone")
+        return self
 
     def as_analysis_document(self) -> AnalysisDocument:
         return AnalysisDocument(

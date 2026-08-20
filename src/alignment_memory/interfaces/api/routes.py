@@ -8,6 +8,11 @@ from uuid import NAMESPACE_URL, uuid4, uuid5
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse
 
+from alignment_memory.application import (
+    ProjectionDocument,
+    ProjectKnowledgeCommand,
+    ProjectKnowledgeService,
+)
 from alignment_memory.domain import (
     AiRun,
     Alignment,
@@ -36,6 +41,7 @@ from alignment_memory.interfaces.api.schemas import (
     InternalJobEvent,
     OverrideCreate,
     PassportGenerate,
+    PublicationUpdate,
     RegisterInstallationRequest,
     WorkerResult,
 )
@@ -45,6 +51,7 @@ from alignment_memory.interfaces.api.security import (
     authenticate_internal,
     authenticate_user,
 )
+from alignment_memory.interfaces.worker.result_schema import ValidatedAnalysisArtifact
 from alignment_memory.ports import (
     GitHubAdapterError,
     GitHubRepositoryRef,
@@ -754,6 +761,181 @@ async def persist_internal_result(
         container,
         200,
         _alignment_payload(persisted),
+    )
+
+
+@router.post("/internal/jobs/{job_id}/knowledge-result", tags=["internal"])
+async def persist_internal_knowledge_result(
+    job_id: str,
+    request: Request,
+    body: ValidatedAnalysisArtifact,
+    internal: Internal,
+    container: Container,
+) -> JSONResponse:
+    replay = await _replayed_operation(request, internal, container)
+    if replay is not None:
+        return replay
+    if body.job_id != job_id or body.event.pr_number is not None:
+        raise ApiError(
+            status_code=422,
+            code="invalid_knowledge_result",
+            message="Repository knowledge result does not match its job",
+        )
+    repository = container.require_repository()
+    job = await repository.get_job(job_id)
+    record = await repository.get_repository_record(body.event.repository_id)
+    if job is None:
+        raise _not_found("job")
+    if record is None:
+        raise _not_found("repository")
+    if job.repository_id != body.event.repository_id:
+        raise ApiError(
+            status_code=409,
+            code="knowledge_result_conflict",
+            message="Repository knowledge result provenance does not match its job",
+        )
+    if (
+        job.event_key != body.event.event_key
+        or job.head_sha != body.event.head_sha
+        or job.job_type is JobType.PR_ANALYSIS
+        or job.status is not JobStatus.PERSISTING
+    ):
+        raise ApiError(
+            status_code=409,
+            code="knowledge_result_conflict",
+            message="Repository knowledge result does not match the active job state",
+        )
+    projection_documents: list[ProjectionDocument] = []
+    for document in body.documents:
+        if (
+            document.source_id is None
+            or document.external_id is None
+            or document.external_version is None
+            or document.content_hash is None
+            or document.occurred_at is None
+        ):
+            if await repository.get_source_version_with_source(document.source_version_id) is None:
+                raise ApiError(
+                    status_code=422,
+                    code="invalid_knowledge_result",
+                    message="New repository knowledge documents require persistence metadata",
+                )
+            continue
+        projection_documents.append(
+            ProjectionDocument(
+                source_id=document.source_id,
+                source_version_id=document.source_version_id,
+                source_type=document.source_type,
+                external_id=document.external_id,
+                external_version=document.external_version,
+                url=str(document.url),
+                content=document.content,
+                content_hash=document.content_hash,
+                occurred_at=document.occurred_at,
+            )
+        )
+
+    now = datetime.now(UTC)
+    run = AiRun(
+        id=_stable_id("ai-run", job_id, body.prompt_version, body.input_hash),
+        job_id=job_id,
+        provider=body.provider,
+        requested_model=body.requested_model,
+        actual_model=body.actual_model,
+        prompt_version=body.prompt_version,
+        input_hash=body.input_hash,
+        output_json=body.analysis.model_dump(mode="json"),
+        validation_status=ValidationStatus.VALID,
+        usage=body.usage,
+        cost=body.cost,
+        created_at=body.created_at,
+        completed_at=now,
+    )
+    updated = await ProjectKnowledgeService(repository).apply(
+        ProjectKnowledgeCommand(
+            job_id=job_id,
+            repository_id=body.event.repository_id,
+            event_key=body.event.event_key,
+            head_sha=body.event.head_sha,
+            expected_revision=body.knowledge_revision,
+            run=run,
+            documents=tuple(projection_documents),
+            analysis=body.analysis,
+            created_at=body.created_at,
+        )
+    )
+    await repository.compare_and_set_job(
+        job_id,
+        JobStatus.PERSISTING,
+        JobStatus.WRITING_GITHUB,
+        occurred_at=now,
+    )
+    return await _store_operation(
+        request,
+        internal,
+        container,
+        200,
+        _repository_payload(updated),
+    )
+
+
+@router.post("/internal/jobs/{job_id}/publication", tags=["internal"])
+async def acknowledge_internal_publication(
+    job_id: str,
+    request: Request,
+    body: PublicationUpdate,
+    internal: Internal,
+    container: Container,
+) -> JSONResponse:
+    replay = await _replayed_operation(request, internal, container)
+    if replay is not None:
+        return replay
+    repository = container.require_repository()
+    job = await repository.get_job(job_id)
+    record = await repository.get_repository_record(body.repository_id)
+    if job is None:
+        raise _not_found("job")
+    if record is None:
+        raise _not_found("repository")
+    if job.repository_id != body.repository_id or job.status is not JobStatus.WRITING_GITHUB:
+        raise ApiError(
+            status_code=409,
+            code="publication_conflict",
+            message="Publication does not match the active job state",
+        )
+    if body.publication_kind == "pr_comment":
+        if body.published_main_sha != body.expected_main_sha:
+            raise ApiError(
+                status_code=422,
+                code="invalid_publication",
+                message="PR comments cannot change the repository main SHA",
+            )
+        updated = record
+    else:
+        updated = await repository.acknowledge_repository_publication(
+            body.repository_id,
+            expected_main_sha=body.expected_main_sha,
+            published_main_sha=body.published_main_sha,
+        )
+    completed = await repository.compare_and_set_job(
+        job_id,
+        JobStatus.WRITING_GITHUB,
+        JobStatus.COMPLETED,
+        occurred_at=datetime.now(UTC),
+    )
+    if completed is None:
+        raise ApiError(
+            status_code=409,
+            code="job_state_conflict",
+            message="Job status changed before publication was acknowledged",
+            retryable=True,
+        )
+    return await _store_operation(
+        request,
+        internal,
+        container,
+        200,
+        {"job": _job_payload(completed), "repository": _repository_payload(updated)},
     )
 
 

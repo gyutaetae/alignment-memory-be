@@ -54,6 +54,13 @@ class InternalJobEvent(ApiModel):
     error_code: str | None = Field(default=None, alias="errorCode")
 
 
+class PublicationUpdate(ApiModel):
+    repository_id: NonEmptyText = Field(alias="repositoryId")
+    publication_kind: Literal["pr_comment", "generated_wiki"] = Field(alias="publicationKind")
+    expected_main_sha: CommitSha = Field(alias="expectedMainSha")
+    published_main_sha: CommitSha = Field(alias="publishedMainSha")
+
+
 class WorkerResult(ApiModel):
     repository_id: NonEmptyText = Field(alias="repositoryId")
     pr_number: Annotated[int, Field(gt=0)] = Field(alias="prNumber")
