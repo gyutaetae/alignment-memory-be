@@ -4,6 +4,7 @@ import pytest
 
 from alignment_memory.contracts import AnalysisResult
 from alignment_memory.interfaces.worker.cli import (
+    _analysis_documents,
     _event_source_type,
     _verify_repository_identity,
     analyze_event,
@@ -240,6 +241,56 @@ def test_event_sources_use_database_supported_types(
     )
 
     assert _event_source_type(event) == expected_source_type
+
+
+def test_analysis_documents_prefer_matching_active_knowledge_version() -> None:
+    event = ParsedGitHubEvent(
+        event_name="pull_request",
+        event_key=f"pr:123:7:{HEAD_SHA}",
+        repository_full_name="acme/alignment-memory",
+        github_repository_id=123,
+        default_branch="main",
+        actor_login="member",
+        actor_association=None,
+        head_sha=HEAD_SHA,
+        main_sha=MAIN_SHA,
+        proposed_change="Adjust the recorded decision.",
+        source_url="https://github.com/acme/alignment-memory/pull/7",
+        pr_number=7,
+    )
+    quote = "Recorded decision: keep the MVP web-only."
+    context = {
+        "knowledge": [
+            {
+                "evidence": [
+                    {
+                        "sourceVersionId": "shared-version",
+                        "url": SOURCE_URL,
+                        "exactQuote": quote,
+                        "verified": True,
+                    }
+                ]
+            }
+        ]
+    }
+    source = CollectedSource(
+        source_id="source-id",
+        source_version_id="shared-version",
+        repository_id=REPOSITORY_ID,
+        source_type=GitHubSourceType.MARKDOWN,
+        external_id="docs/adr.md",
+        external_version=MAIN_SHA,
+        url=SOURCE_URL,
+        content=quote,
+        content_hash="c" * 64,
+        occurred_at=datetime(2026, 8, 4, tzinfo=UTC),
+    )
+
+    documents, context_ids = _analysis_documents(event, context, (source,))
+
+    shared = next(item for item in documents if item.source_version_id == "shared-version")
+    assert shared.source_type == "active_knowledge"
+    assert context_ids == frozenset({"shared-version"})
 
 
 @pytest.mark.asyncio
