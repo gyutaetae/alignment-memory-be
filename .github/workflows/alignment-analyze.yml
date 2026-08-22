@@ -3,6 +3,8 @@ name: Alignment Memory Analyze
 on:
   pull_request:
     types: [opened, reopened, synchronize, edited]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       jobId:
