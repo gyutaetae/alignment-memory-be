@@ -29,6 +29,12 @@ def test_workflows_never_use_target_event_or_execute_pr_head() -> None:
     assert "head.repo.full_name == github.repository" in jobs["analyze"]["if"]
 
 
+def test_analyze_refreshes_project_memory_after_main_changes() -> None:
+    analyze = _workflow(ANALYZE_PATH)
+
+    assert analyze["on"]["push"]["branches"] == ["main"]
+
+
 def test_analyze_has_read_only_permissions_and_analysis_secrets() -> None:
     analyze = _workflow(ANALYZE_PATH)
     job = analyze["jobs"]["analyze"]
