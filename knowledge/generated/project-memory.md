@@ -3,15 +3,26 @@
 > Generated deterministically from validated evidence. Edit source records, not this file.
 
 - Repository: `gyutaetae/alignment-memory-be`
-- Knowledge revision: `7`
-- Source head: `5cad9ed6f3b7152f3aae81164c3c6384ac77dc19`
+- Knowledge revision: `8`
+- Source head: `5222ca926abf431032c2c99f5e3abf4c8ba81464`
 
 ## Contents
 
-- [[project-memory#ADR-017|Narrow MVP boundary]]
-- [[project-memory#Cross-border collaboration agreement - Evidence boundary|Privacy-Decision]]
-- [[project-memory#Exclude browser extension and external ingestion|Exclude browser extension and external ingestion]]
+- [[project-memory#decision:no-raw-message-logging|No raw message logging in external analytics]]
+- [[project-memory#goal:privacy-safe-collaboration|Privacy-safe collaboration]]
 - [[project-memory#Do not store raw user messages in external analytics|Do not store raw user messages in external analytics]]
+
+## Goals
+
+### goal:privacy-safe-collaboration
+
+- Title: Privacy-safe collaboration
+- Type: `goal`
+- Status: `active`
+- Summary: Ensure privacy by not storing raw user messages in external analytics and using only anonymized data for debugging.
+- Evidence:
+  - [원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다.](https://github.com/gyutaetae/alignment-memory-be/pull/2.diff) (`603d0d72-375d-54b1-bde7-35760e91f02b`)
+
 
 ## Requirements
 
@@ -20,41 +31,19 @@
 - Title: Do not store raw user messages in external analytics
 - Type: `requirement`
 - Status: `active`
-- Summary: "원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다."
+- Summary: Raw user messages must not be stored in external analytics services.
 - Evidence:
-  - [> 원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다. 디버깅에는 익명화된 집계 지표와 재현 가능한 오류 코드만 사용한다.
-
-English working translation: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/demo-cross-border-agreement.md) (`f812a9eb-bcbd-57b5-91cf-41bcbc469ba1`)
-  - ["원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다."](https://github.com/gyutaetae/alignment-memory-be/pull/2.diff) (`603d0d72-375d-54b1-bde7-35760e91f02b`)
+  - [Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/demo-cross-border-agreement.md) (`f812a9eb-bcbd-57b5-91cf-41bcbc469ba1`)
+  - [원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다.](https://github.com/gyutaetae/alignment-memory-be/pull/2.diff) (`603d0d72-375d-54b1-bde7-35760e91f02b`)
 
 
 ## Decisions
 
-### ADR-017
+### decision:no-raw-message-logging
 
-- Title: Narrow MVP boundary
+- Title: No raw message logging in external analytics
 - Type: `decision`
 - Status: `active`
-- Summary: Decision: The MVP boundary is one public GitHub repository with native integration only.
+- Summary: Do not store raw user messages in external analytics services; use only anonymized metrics and error codes for debugging.
 - Evidence:
-  - [Decision: The MVP boundary is one public GitHub repository with native integration only.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/adr.md) (`51516476-870f-4f9a-92b2-699107892b8d`)
-
-### Cross-border collaboration agreement - Evidence boundary
-
-- Title: Privacy-Decision
-- Type: `decision`
-- Status: `active`
-- Summary: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.
-- Evidence:
-  - [> 원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다. 디버깅에는 익명화된 집계 지표와 재현 가능한 오류 코드만 사용한다.
-
-English working translation: Do not store raw user messages in external analytics services. Use anonymized aggregate metrics and reproducible error codes for debugging.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/demo-cross-border-agreement.md) (`f812a9eb-bcbd-57b5-91cf-41bcbc469ba1`)
-
-### Exclude browser extension and external ingestion
-
-- Title: Exclude browser extension and external ingestion
-- Type: `decision`
-- Status: `active`
-- Summary: Browser extension; Slack, Notion, Figma, or Agora ingestion are Non-goals.
-- Evidence:
-  - [Browser extension; Slack, Notion, Figma, or Agora ingestion are Non-goals.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/prd.md) (`8ea10c2f-0ee5-4f2b-aa61-4602c5bc2b12`)
+  - [> 원문 사용자 메시지는 외부 분석 서비스에 저장하지 않는다. 디버깅에는 익명화된 집계 지표와 재현 가능한 오류 코드만 사용한다.](https://github.com/gyutaetae/alignment-memory-be/blob/main/docs/demo-cross-border-agreement.md) (`f812a9eb-bcbd-57b5-91cf-41bcbc469ba1`)
