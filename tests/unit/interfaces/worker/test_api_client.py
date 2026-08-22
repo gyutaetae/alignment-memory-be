@@ -84,4 +84,5 @@ async def test_hmac_client_exposes_safe_error_code_without_provider_body() -> No
 
     assert raised.value.code == "stale_repository_state"
     assert raised.value.retryable is True
+    assert "code=stale_repository_state" in str(raised.value)
     assert "secret upstream payload" not in str(raised.value)
