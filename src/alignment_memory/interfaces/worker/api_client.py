@@ -237,7 +237,8 @@ def _response_error(response: httpx.Response) -> WorkerApiError:
                 retryable = supplied_retryable
     return WorkerApiError(
         code,
-        f"Alignment Memory API rejected the worker request ({response.status_code})",
+        "Alignment Memory API rejected the worker request "
+        f"({response.status_code}, code={code})",
         status_code=response.status_code,
         retryable=retryable,
     )
